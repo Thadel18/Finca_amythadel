@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Finca Amy&Thadel</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#22432F">
+<style>
+:root{
+  --tierra:#22432F; --tierra2:#152C1E; --sage:#EDF1E9; --ocre:#C98A2C;
+  --agua:#2E6E77; --rust:#A6402D; --papel:#FBF9F4; --linea:#D8D3C4; --texto:#22301F;
+}
+*{box-sizing:border-box;}
+body{margin:0;font-family:-apple-system,"Segoe UI",system-ui,Roboto,sans-serif;background:var(--sage);color:var(--texto);}
+header{background:var(--tierra);color:var(--papel);padding:18px;}
+header h1{margin:0;font-size:1.3rem;letter-spacing:.03em;}
+header p{margin:3px 0 0;font-size:.8rem;color:#CBD9C6;}
+nav{display:flex;background:var(--tierra2);overflow-x:auto;position:sticky;top:0;z-index:10;}
+nav button{flex:1;min-width:78px;background:none;border:none;color:#B9C7B4;padding:11px 6px;font-size:.72rem;font-weight:600;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;}
+nav button.activo{color:#fff;border-bottom-color:var(--ocre);}
+main{padding:12px 12px 80px;max-width:760px;margin:0 auto;}
+section{display:none;} section.activo{display:block;}
+.card{background:var(--papel);border:1px solid var(--linea);border-radius:10px;padding:13px;margin-bottom:12px;}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.kpi{background:var(--papel);border:1px solid var(--linea);border-radius:10px;padding:12px;}
+.kpi .num{font-size:1.25rem;font-weight:700;} .kpi .lbl{font-size:.68rem;text-transform:uppercase;color:#5A6B54;}
+.kpi.bien .num{color:var(--tierra);} .kpi.mal .num{color:var(--rust);} .kpi.warn .num{color:var(--ocre);}
+label{display:block;font-size:.76rem;font-weight:600;margin:9px 0 4px;color:#4A5A45;}
+input,select,textarea{width:100%;padding:8px 9px;border:1px solid var(--linea);border-radius:7px;font-size:.92rem;background:#fff;font-family:inherit;}
+textarea{resize:vertical;min-height:44px;}
+.fila2{display:grid;grid-template-columns:1fr 1fr;gap:9px;} .fila3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;}
+button.principal{margin-top:12px;width:100%;background:var(--tierra);color:#fff;border:none;padding:10px;border-radius:7px;font-size:.92rem;font-weight:600;cursor:pointer;}
+button.sec{background:#fff;color:var(--tierra);border:1px solid var(--tierra);padding:6px 9px;border-radius:6px;font-size:.75rem;cursor:pointer;}
+button.mini-edit{background:none;border:none;color:var(--agua);font-size:.85rem;cursor:pointer;padding:2px 4px;}
+button.mini-del{background:none;border:none;color:var(--rust);font-size:.85rem;cursor:pointer;padding:2px 4px;}
+.item{border-bottom:1px solid var(--linea);padding:8px 0;display:flex;justify-content:space-between;align-items:flex-start;gap:6px;}
+.item:last-child{border-bottom:none;}
+.item-txt{flex:1;} .item-top{font-weight:600;font-size:.88rem;} .item-sub{font-size:.76rem;color:#5A6B54;margin-top:1px;}
+.item-acc{display:flex;gap:2px;white-space:nowrap;}
+.badge{display:inline-block;font-size:.65rem;font-weight:700;padding:2px 6px;border-radius:20px;margin-left:5px;}
+.badge.ingreso{background:#DCEBD7;color:var(--tierra);} .badge.gasto{background:#F3DAD3;color:var(--rust);}
+.vacio{text-align:center;color:#7C8A76;font-size:.83rem;padding:18px 8px;}
+.tabs2{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;}
+.tabs2 button{background:#fff;border:1px solid var(--linea);border-radius:20px;padding:5px 12px;font-size:.75rem;cursor:pointer;}
+.tabs2 button.activo{background:var(--tierra);color:#fff;border-color:var(--tierra);}
+.barra-fondo{background:#E2E0D2;border-radius:5px;height:8px;overflow:hidden;} .barra-rellena{height:100%;background:var(--ocre);}
+.subgrupo{margin-top:14px;font-size:.85rem;font-weight:700;color:var(--tierra);}
+small.ayuda{color:#7C8A76;font-size:.7rem;display:block;margin-top:3px;}
+.footer-acc{display:flex;gap:8px;margin-top:6px;} .footer-acc button{flex:1;}
+</style>
+</head>
+<body>
+
+<div id="loginOverlay" style="position:fixed;inset:0;background:var(--sage);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;">
+  <div class="card" style="max-width:360px;width:100%;">
+    <div id="loginSetupView">
+      <strong>Crear acceso a la app</strong>
+      <p style="font-size:.8rem;color:#5A6B54;">Primera vez: crea un usuario y contraseña para proteger los datos de la finca en este dispositivo.</p>
+      <label>Usuario</label><input id="setupUsuario" placeholder="Ej: klever">
+      <label>Contraseña</label><input type="password" id="setupPass">
+      <label>Repetir contraseña</label><input type="password" id="setupPass2">
+      <button class="principal" onclick="crearCredenciales()">Crear usuario</button>
+      <p id="setupError" style="color:var(--rust);font-size:.8rem;"></p>
+    </div>
+    <div id="loginEntradaView" style="display:none;">
+      <strong>Iniciar sesión — <span id="loginNombreApp">Finca Amy&amp;Thadel</span></strong>
+      <label>Usuario</label><input id="loginUsuario">
+      <label>Contraseña</label><input type="password" id="loginPass">
+      <button class="principal" onclick="iniciarSesion()">Ingresar</button>
+      <p id="loginError" style="color:var(--rust);font-size:.8rem;"></p>
+      <small class="ayuda">¿Olvidaste tu contraseña? Solo se puede restablecer borrando los datos de la app desde Ajustes o reinstalándola — no hay recuperación por internet porque la app es offline.</small>
+    </div>
+  </div>
+</div>
+
+<div id="appWrap" style="display:none;">
+<header><h1 id="tituloApp">FINCA AMY&THADEL</h1>
+<p>Comunidad Kichwa Omagua San Francisco · Enokanqui · La Joya de los Sachas, Orellana</p></header>
+
+<nav>
+  <button data-tab="resumen" class="activo">Resumen</button>
+  <button data-tab="cultivos">Cultivos</button>
+  <button data-tab="acuicultura">Acuicultura</button>
+  <button data-tab="avicultura">Avicultura</button>
+  <button data-tab="finanzas">Finanzas</button>
+  <button data-tab="ajustes">Ajustes</button>
+</nav>
+
+<main>
+
+<!-- RESUMEN -->
+<section id="resumen" class="activo">
+  <div class="kpis">
+    <div class="kpi bien"><div class="num" id="kpiIngresos">$0</div><div class="lbl">Ingresos totales de la finca</div></div>
+    <div class="kpi mal"><div class="num" id="kpiEgresos">$0</div><div class="lbl">Egresos totales de la finca</div></div>
+    <div class="kpi"><div class="num" id="kpiBalance">$0</div><div class="lbl">Balance</div></div>
+    <div class="kpi warn"><div class="num" id="kpiInsumos">0</div><div class="lbl">Insumos críticos</div></div>
+    <div class="kpi"><div class="num" id="kpiLotes">0</div><div class="lbl">Lotes/Piscinas/Galpones</div></div>
+  </div>
+  <div class="card"><strong>Gastos por rubro</strong><div id="graficoRubros" style="margin-top:8px;"></div></div>
+  <div class="card"><strong>Insumos en stock crítico</strong><div id="listaCriticos"></div></div>
+  <div class="card"><strong>Últimas actividades registradas</strong><div id="ultimasAct"></div></div>
+</section>
+
+<!-- CULTIVOS -->
+<section id="cultivos">
+  <div class="card">
+    <strong>Nuevo lote de cultivo</strong>
+    <label>Nombre del lote</label><input id="loteNombre" placeholder="Ej: Lote 3">
+    <label>Cultivo</label><select id="loteCultivo"></select>
+    <label>Área</label><input id="loteArea" placeholder="Ej: 1.5 ha">
+    <div class="subgrupo">Vértices del polígono del lote (opcional)</div>
+    <div class="fila3">
+      <input id="lotePtLat" placeholder="Latitud">
+      <input id="lotePtLng" placeholder="Longitud">
+      <button class="sec" type="button" onclick="agregarPunto('lote')">+ Punto</button>
+    </div>
+    <button class="sec" type="button" style="margin-top:6px;width:100%;" onclick="usarUbicacionPunto('lote')">📍 Usar mi ubicación como punto</button>
+    <div id="lotePuntosLista" style="margin-top:6px;font-size:.78rem;"></div>
+    <div class="subgrupo">Fotos del lote (opcional)</div>
+    <input type="file" id="loteFotosInput" accept="image/*" multiple onchange="manejarFotos('lote', this)">
+    <div id="loteFotosPreview" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;"></div>
+    <button class="principal" onclick="guardarLote('cultivo')">Guardar lote</button>
+  </div>
+  <div class="card"><strong>Mis lotes</strong><div id="listaLotes"></div></div>
+
+  <div class="card">
+    <strong>Registrar actividad de campo</strong>
+    <label>Lote</label><select id="regLote"></select>
+    <label>Etapa</label>
+    <select id="regEtapa"><option>Vivero</option><option>Trasplante</option><option>Mantenimiento</option><option>Cosecha</option></select>
+    <label>Fase / Actividad (catálogo — editable en Ajustes)</label>
+    <select id="regActividad"></select>
+    <label>Fecha</label><input type="date" id="regFecha">
+    <label>Método de ejecución</label>
+    <select id="regMetodo"><option>Manual</option><option>Guadaña</option><option>Herbicida</option><option>Mecanizado</option><option>Otro</option></select>
+    <div class="subgrupo">Insumo aplicado (opcional)</div>
+    <select id="regInsumo" onchange="autocompletarCostoInsumo()"><option value="">— Ninguno —</option></select>
+    <div class="fila3">
+      <div><label>Dosis</label><input id="regDosis" placeholder="Ej: 200"></div>
+      <div><label>Unidad</label><select id="regDosisUnidad"><option>g/planta</option><option>g/ha</option><option>ml/L agua</option><option>L/bomba</option><option>kg/ha</option></select></div>
+      <div><label>Cantidad usada</label><input id="regCantidad" placeholder="Ej: 5" oninput="autocompletarCostoInsumo()"></div>
+    </div>
+    <label>Costo del insumo aplicado ($)</label><input type="number" id="regCostoInsumo" placeholder="0">
+    <small class="ayuda">Se calcula solo si el insumo tiene costo unitario cargado en Ajustes; puedes ajustarlo a mano.</small>
+    <div class="subgrupo">Mano de obra (opcional)</div>
+    <div class="fila3">
+      <div><label>Jornalero</label><input id="regJornalero" placeholder="Nombre"></div>
+      <div><label>Jornales/Horas</label><input id="regJornales" placeholder="Ej: 1 jornal"></div>
+      <div><label>Costo</label><input type="number" id="regCostoMO" placeholder="0"></div>
+    </div>
+    <label>Notas</label><textarea id="regNotas"></textarea>
+    <button class="principal" onclick="guardarRegistroActividad()">Guardar actividad</button>
+  </div>
+  <div class="card"><strong>Historial de actividades</strong><div id="listaRegistros"></div></div>
+
+  <div class="card">
+    <strong>Rentabilidad</strong>
+    <small class="ayuda">Ingresos y gastos (insumos + mano de obra + movimientos financieros) agrupados por cultivo o por lote específico.</small>
+    <div class="tabs2" style="margin-top:8px;">
+      <button id="tabRentCultivo" class="activo" onclick="cambiarVistaRentabilidad('cultivo')">Por cultivo</button>
+      <button id="tabRentLote" onclick="cambiarVistaRentabilidad('lote')">Por lote</button>
+    </div>
+    <div id="rentabilidadCultivos"></div>
+  </div>
+</section>
+
+<!-- ACUICULTURA -->
+<section id="acuicultura">
+  <div class="card">
+    <strong>Nueva piscina</strong>
+    <label>Nombre</label><input id="pisNombre" placeholder="Ej: Piscina Tilapia A">
+    <label>Especie</label><input id="pisEspecie" placeholder="Ej: Tilapia, Cachama">
+    <label>Área / volumen</label><input id="pisArea" placeholder="Ej: 300 m³">
+    <div class="subgrupo">Vértices del polígono (opcional)</div>
+    <div class="fila3">
+      <input id="pisPtLat" placeholder="Latitud">
+      <input id="pisPtLng" placeholder="Longitud">
+      <button class="sec" type="button" onclick="agregarPunto('pis')">+ Punto</button>
+    </div>
+    <button class="sec" type="button" style="margin-top:6px;width:100%;" onclick="usarUbicacionPunto('pis')">📍 Usar mi ubicación como punto</button>
+    <div id="pisPuntosLista" style="margin-top:6px;font-size:.78rem;"></div>
+    <div class="subgrupo">Fotos (opcional)</div>
+    <input type="file" id="pisFotosInput" accept="image/*" multiple onchange="manejarFotos('pis', this)">
+    <div id="pisFotosPreview" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;"></div>
+    <button class="principal" onclick="guardarLote('piscina')">Guardar piscina</button>
+  </div>
+  <div class="card"><strong>Mis piscinas</strong><div id="listaPiscinas"></div></div>
+  <div class="card">
+    <strong>Registrar manejo</strong>
+    <label>Piscina</label><select id="pisRegLote"></select>
+    <label>Actividad</label>
+    <select id="pisActividad"><option>Siembra de alevines</option><option>Alimentación</option><option>Muestreo</option><option>Recambio de agua</option><option>Cosecha</option><option>Sanidad</option></select>
+    <label>Fecha</label><input type="date" id="pisFecha">
+    <label>Cantidad / detalle</label><input id="pisDetalle" placeholder="Ej: 500 alevines, 5kg balanceado">
+    <label>Notas</label><textarea id="pisNotas"></textarea>
+    <button class="principal" onclick="guardarRegistroPecuario('acuicultura')">Guardar registro</button>
+  </div>
+  <div class="card"><strong>Historial acuicultura</strong><div id="listaRegPis"></div></div>
+</section>
+
+<!-- AVICULTURA -->
+<section id="avicultura">
+  <div class="card">
+    <strong>Nuevo galpón</strong>
+    <label>Nombre</label><input id="galNombre" placeholder="Ej: Galpón Ponedoras 1">
+    <label>Tipo</label><select id="galTipo"><option>Gallinas ponedoras</option><option>Gallinas criollas</option></select>
+    <label>N.° de aves</label><input id="galAves" placeholder="Ej: 40">
+    <div class="subgrupo">Vértices del polígono (opcional)</div>
+    <div class="fila3">
+      <input id="galPtLat" placeholder="Latitud">
+      <input id="galPtLng" placeholder="Longitud">
+      <button class="sec" type="button" onclick="agregarPunto('gal')">+ Punto</button>
+    </div>
+    <button class="sec" type="button" style="margin-top:6px;width:100%;" onclick="usarUbicacionPunto('gal')">📍 Usar mi ubicación como punto</button>
+    <div id="galPuntosLista" style="margin-top:6px;font-size:.78rem;"></div>
+    <div class="subgrupo">Fotos (opcional)</div>
+    <input type="file" id="galFotosInput" accept="image/*" multiple onchange="manejarFotos('gal', this)">
+    <div id="galFotosPreview" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;"></div>
+    <button class="principal" onclick="guardarLote('galpon')">Guardar galpón</button>
+  </div>
+  <div class="card"><strong>Mis galpones</strong><div id="listaGalpones"></div></div>
+  <div class="card">
+    <strong>Registrar manejo</strong>
+    <label>Galpón</label><select id="galRegLote"></select>
+    <label>Actividad</label>
+    <select id="galActividad"><option>Recolección de huevos</option><option>Alimentación</option><option>Sanidad / vacunación</option><option>Limpieza galpón</option><option>Venta de aves</option></select>
+    <label>Fecha</label><input type="date" id="galFecha">
+    <label>Cantidad / detalle</label><input id="galDetalle" placeholder="Ej: 32 huevos, 10kg balanceado">
+    <label>Notas</label><textarea id="galNotas"></textarea>
+    <button class="principal" onclick="guardarRegistroPecuario('avicultura')">Guardar registro</button>
+  </div>
+  <div class="card"><strong>Historial avicultura</strong><div id="listaRegGal"></div></div>
+</section>
+
+<!-- FINANZAS -->
+<section id="finanzas">
+  <div class="card">
+    <strong>Registrar movimiento</strong>
+    <div class="fila2">
+      <div><label>Tipo</label><select id="movTipo"><option value="ingreso">Ingreso</option><option value="gasto">Gasto</option></select></div>
+      <div><label>Fecha</label><input type="date" id="movFecha"></div>
+    </div>
+    <label>Rubro</label>
+    <input id="movRubro" list="rubrosLista" placeholder="Ej: Venta cosecha, Insumos, Mano de obra">
+    <datalist id="rubrosLista"><option value="Venta de cultivo"><option value="Venta de peces"><option value="Venta de huevos"><option value="Insumos"><option value="Mano de obra"><option value="Alimento balanceado"><option value="Transporte"><option value="Otros"></datalist>
+    <div class="fila2">
+      <div><label>Monto</label><input type="number" id="movMonto" placeholder="0"></div>
+      <div><label>Lote asociado (opcional)</label><select id="movLote"><option value="">— General —</option></select></div>
+    </div>
+    <label>Descripción</label><input id="movDesc">
+    <button class="principal" onclick="guardarMovimiento()">Guardar movimiento</button>
+  </div>
+  <div class="card"><strong>Movimientos</strong><div id="listaMovimientos"></div></div>
+</section>
+
+<!-- AJUSTES -->
+<section id="ajustes">
+  <div class="card">
+    <strong>Seguridad</strong>
+    <p style="font-size:.8rem;color:#5A6B54;">Usuario actual: <span id="usuarioActualLbl">—</span></p>
+    <label>Nueva contraseña</label><input type="password" id="nuevaPassInput">
+    <button class="sec" style="margin-top:6px;" onclick="cambiarPassword()">Actualizar contraseña</button>
+    <button class="sec" style="margin-top:10px;width:100%;border-color:var(--rust);color:var(--rust);" onclick="cerrarSesion()">Cerrar sesión</button>
+  </div>
+
+  <div class="card">
+    <strong>Nombre de la finca / app</strong>
+    <input id="nombreAppInput" placeholder="Finca Amy&Thadel">
+    <button class="sec" style="margin-top:8px;" onclick="cambiarNombreApp()">Actualizar nombre</button>
+  </div>
+
+  <div class="card">
+    <strong>Catálogo de cultivos</strong>
+    <div class="fila2"><input id="nuevoCultivo" placeholder="Ej: Vainilla, Macambo, Maní..."><button class="sec" onclick="agregarCatalogo('cultivos','nuevoCultivo')">Agregar</button></div>
+    <div id="listaCatCultivos" style="margin-top:8px;"></div>
+  </div>
+
+  <div class="card">
+    <strong>Catálogo de fases y actividades</strong>
+    <small class="ayuda">Precargado con el plan de labores. Puedes agregar, editar o eliminar fases/actividades.</small>
+    <div class="fila2" style="margin-top:8px;">
+      <input id="nuevaFase" placeholder="Fase (ej: XIII. Cosecha)">
+      <input id="nuevaActividad" placeholder="Actividad">
+    </div>
+    <button class="sec" style="margin-top:6px;" onclick="agregarActividad()">Agregar actividad</button>
+    <div id="listaCatActividades" style="margin-top:8px;"></div>
+  </div>
+
+  <div class="card">
+    <strong>Catálogo de insumos</strong>
+    <div class="fila3">
+      <input id="nuevoInsumoNombre" placeholder="Nombre">
+      <select id="nuevoInsumoTipo"><option>Fertilizante</option><option>Fungicida</option><option>Insecticida</option><option>Herbicida</option><option>Otro</option></select>
+      <input id="nuevoInsumoStock" type="number" placeholder="Stock">
+    </div>
+    <div class="fila2">
+      <div><label>Stock mínimo (para alertas)</label><input id="nuevoInsumoMin" type="number" placeholder="Ej: 5"></div>
+      <div><label>Costo unitario ($)</label><input id="nuevoInsumoCosto" type="number" placeholder="Ej: 2.5"></div>
+    </div>
+    <button class="sec" style="margin-top:6px;" onclick="agregarInsumo()">Agregar insumo</button>
+    <div id="listaCatInsumos" style="margin-top:8px;"></div>
+  </div>
+
+  <div class="card">
+    <strong>Respaldo de datos</strong>
+    <div class="footer-acc">
+      <button class="sec" onclick="exportarDatos()">⬇ Exportar respaldo</button>
+      <button class="sec" onclick="document.getElementById('importarArchivo').click()">⬆ Importar respaldo</button>
+    </div>
+    <input type="file" id="importarArchivo" accept="application/json" style="display:none" onchange="importarDatos(event)">
+    <button class="sec" style="border-color:var(--rust);color:var(--rust);margin-top:10px;width:100%;" onclick="borrarTodo()">Borrar todos los datos</button>
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+// ---------------- Estado ----------------
+const FASES_DEFAULT = [
+["Fase 1: Propagación y Material Vegetal","Recolección de frutos madre"],["Fase 1: Propagación y Material Vegetal","Despulpado/secado de semillas"],["Fase 1: Propagación y Material Vegetal","Preparación de sustratos"],["Fase 1: Propagación y Material Vegetal","Llenado de bolsas/bandejas"],["Fase 1: Propagación y Material Vegetal","Siembra en semillero"],["Fase 1: Propagación y Material Vegetal","Injertación"],["Fase 1: Propagación y Material Vegetal","Riego en vivero"],["Fase 1: Propagación y Material Vegetal","Control fitosanitario (vivero)"],["Fase 1: Propagación y Material Vegetal","Endurecimiento"],
+["Fase 2: Establecimiento y Precultural","Análisis de suelo"],["Fase 2: Establecimiento y Precultural","Tumba y picado"],["Fase 2: Establecimiento y Precultural","Arado"],["Fase 2: Establecimiento y Precultural","Rastrillado"],["Fase 2: Establecimiento y Precultural","Encalado (corrección de pH)"],["Fase 2: Establecimiento y Precultural","Trazado y ahoyado"],["Fase 2: Establecimiento y Precultural","Abonado de fondo o base"],["Fase 2: Establecimiento y Precultural","Instalación de sistema de riego"],["Fase 2: Establecimiento y Precultural","Trasplante o siembra directa"],
+["Fase 3: Desarrollo y Labores Culturales","Riegos programados"],["Fase 3: Desarrollo y Labores Culturales","Fertilización de cobertura (edáfica o foliar)"],["Fase 3: Desarrollo y Labores Culturales","Control de malezas (plateo manual o herbicida)"],["Fase 3: Desarrollo y Labores Culturales","Podas de formación/mantenimiento"],["Fase 3: Desarrollo y Labores Culturales","Tutorado"],["Fase 3: Desarrollo y Labores Culturales","Aporque"],["Fase 3: Desarrollo y Labores Culturales","Monitoreo y control de plagas/enfermedades"],
+["Fase 4: Cosecha y Post-cosecha","Recolección (manual o mecánica)"],["Fase 4: Cosecha y Post-cosecha","Transporte interno al centro de acopio"],["Fase 4: Cosecha y Post-cosecha","Lavado"],["Fase 4: Cosecha y Post-cosecha","Selección/clasificación por calidad"],["Fase 4: Cosecha y Post-cosecha","Secado/fermentado"],["Fase 4: Cosecha y Post-cosecha","Desinfección post-cosecha"],["Fase 4: Cosecha y Post-cosecha","Empaque"],
+["Fase 5: Comercialización y Logística","Almacenamiento temporal (frío o bodega)"],["Fase 5: Comercialización y Logística","Transporte al mercado de destino"],["Fase 5: Comercialización y Logística","Trámites de certificación/exportación"],["Fase 5: Comercialización y Logística","Facturación y venta"]
+];
+const CULTIVOS_DEFAULT = ["Café","Plátano","Cacao","Vainilla","Macambo","Maní"];
+
+function estadoInicial(){
+  return {
+    nombreApp: "FINCA AMY&THADEL",
+    siguienteId: 1,
+    catCultivos: CULTIVOS_DEFAULT.map(n=>({id:nid(),nombre:n})),
+    catActividades: FASES_DEFAULT.map(([fase,act])=>({id:nid(),fase,actividad:act})),
+    catInsumos: [],
+    lotes: [], // {id, tipo: cultivo/piscina/galpon, nombre, cultivoId/especie/tipoAve, area}
+    registros: [], // actividades de cultivo
+    registrosPecuarios: [], // acuicultura/avicultura
+    movimientos: []
+  };
+  function nid(){ return Math.random().toString(36).slice(2,9); }
+}
+function nid(){ return Math.random().toString(36).slice(2,9); }
+
+let datos = cargar();
+function cargar(){
+  try{ const raw = localStorage.getItem('finca_amythadel_v1'); if(raw) return JSON.parse(raw); }catch(e){}
+  return estadoInicial();
+}
+function guardar(){ localStorage.setItem('finca_amythadel_v1', JSON.stringify(datos)); }
+
+// ---------------- Navegación ----------------
+document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('nav button').forEach(x=>x.classList.remove('activo'));
+  document.querySelectorAll('main section').forEach(x=>x.classList.remove('activo'));
+  b.classList.add('activo'); document.getElementById(b.dataset.tab).classList.add('activo');
+  if(b.dataset.tab==='resumen') renderResumen();
+}));
+
+// ---------------- Ajustes: nombre app ----------------
+function cambiarNombreApp(){
+  const v = document.getElementById('nombreAppInput').value.trim();
+  if(v){ datos.nombreApp = v; guardar(); document.getElementById('tituloApp').textContent = v.toUpperCase(); }
+}
+
+// ---------------- Catálogos ----------------
+function agregarCatalogo(tipo, inputId){
+  const val = document.getElementById(inputId).value.trim();
+  if(!val) return;
+  if(tipo==='cultivos') datos.catCultivos.push({id:nid(), nombre: val});
+  guardar(); document.getElementById(inputId).value=''; renderCatalogos(); renderSelects();
+}
+function editarCultivo(id){
+  const c = datos.catCultivos.find(x=>x.id===id); if(!c) return;
+  const nuevo = prompt('Editar cultivo:', c.nombre); if(nuevo===null||!nuevo.trim()) return;
+  c.nombre = nuevo.trim(); guardar(); renderCatalogos(); renderSelects();
+}
+function borrarCultivo(id){
+  if(!confirm('¿Eliminar este cultivo del catálogo?')) return;
+  datos.catCultivos = datos.catCultivos.filter(x=>x.id!==id); guardar(); renderCatalogos(); renderSelects();
+}
+function agregarActividad(){
+  const fase = document.getElementById('nuevaFase').value.trim();
+  const act = document.getElementById('nuevaActividad').value.trim();
+  if(!fase || !act) return;
+  datos.catActividades.push({id:nid(), fase, actividad:act});
+  guardar(); document.getElementById('nuevaFase').value=''; document.getElementById('nuevaActividad').value='';
+  renderCatalogos(); renderSelects();
+}
+function editarActividad(id){
+  const a = datos.catActividades.find(x=>x.id===id); if(!a) return;
+  const nueva = prompt('Editar actividad:', a.actividad); if(nueva===null||!nueva.trim()) return;
+  a.actividad = nueva.trim(); guardar(); renderCatalogos(); renderSelects();
+}
+function borrarActividad(id){
+  if(!confirm('¿Eliminar esta actividad del catálogo?')) return;
+  datos.catActividades = datos.catActividades.filter(x=>x.id!==id); guardar(); renderCatalogos(); renderSelects();
+}
+function agregarInsumo(){
+  const nombre = document.getElementById('nuevoInsumoNombre').value.trim();
+  if(!nombre) return;
+  datos.catInsumos.push({
+    id:nid(), nombre, tipo: document.getElementById('nuevoInsumoTipo').value,
+    stock: parseFloat(document.getElementById('nuevoInsumoStock').value)||0,
+    stockMin: parseFloat(document.getElementById('nuevoInsumoMin').value)||0,
+    costoUnitario: parseFloat(document.getElementById('nuevoInsumoCosto').value)||0
+  });
+  guardar();
+  ['nuevoInsumoNombre','nuevoInsumoStock','nuevoInsumoMin','nuevoInsumoCosto'].forEach(i=>document.getElementById(i).value='');
+  renderCatalogos(); renderSelects();
+}
+function editarInsumo(id){
+  const i = datos.catInsumos.find(x=>x.id===id); if(!i) return;
+  const nuevoStock = prompt('Editar stock actual de "'+i.nombre+'":', i.stock);
+  if(nuevoStock===null) return;
+  i.stock = parseFloat(nuevoStock)||0; guardar(); renderCatalogos(); renderResumen();
+}
+function borrarInsumo(id){
+  if(!confirm('¿Eliminar este insumo?')) return;
+  datos.catInsumos = datos.catInsumos.filter(x=>x.id!==id); guardar(); renderCatalogos(); renderSelects();
+}
+
+function renderCatalogos(){
+  document.getElementById('listaCatCultivos').innerHTML = datos.catCultivos.map(c=>`
+    <div class="item"><div class="item-txt">${c.nombre}</div>
+    <div class="item-acc"><button class="mini-edit" onclick="editarCultivo('${c.id}')">✎</button><button class="mini-del" onclick="borrarCultivo('${c.id}')">🗑</button></div></div>`).join('') || '<p class="vacio">Sin cultivos.</p>';
+
+  document.getElementById('listaCatActividades').innerHTML = datos.catActividades.map(a=>`
+    <div class="item"><div class="item-txt"><div class="item-top">${a.actividad}</div><div class="item-sub">${a.fase}</div></div>
+    <div class="item-acc"><button class="mini-edit" onclick="editarActividad('${a.id}')">✎</button><button class="mini-del" onclick="borrarActividad('${a.id}')">🗑</button></div></div>`).join('') || '<p class="vacio">Sin actividades.</p>';
+
+  document.getElementById('listaCatInsumos').innerHTML = datos.catInsumos.map(i=>`
+    <div class="item"><div class="item-txt"><div class="item-top">${i.nombre} <span class="item-sub">(${i.tipo})</span></div><div class="item-sub">Stock: ${i.stock} · mínimo: ${i.stockMin} · costo unit.: ${fmt(i.costoUnitario||0)}</div></div>
+    <div class="item-acc"><button class="mini-edit" onclick="editarInsumo('${i.id}')">✎</button><button class="mini-del" onclick="borrarInsumo('${i.id}')">🗑</button></div></div>`).join('') || '<p class="vacio">Sin insumos.</p>';
+}
+
+function renderSelects(){
+  document.getElementById('loteCultivo').innerHTML = datos.catCultivos.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('') || '<option value="">Agrega un cultivo primero</option>';
+  const lotesCultivo = datos.lotes.filter(l=>l.tipo==='cultivo');
+  document.getElementById('regLote').innerHTML = lotesCultivo.map(l=>`<option value="${l.id}">${l.nombre}</option>`).join('') || '<option value="">Registra un lote primero</option>';
+  document.getElementById('regActividad').innerHTML = datos.catActividades.map(a=>`<option value="${a.id}">${a.fase} — ${a.actividad}</option>`).join('');
+  document.getElementById('regInsumo').innerHTML = '<option value="">— Ninguno —</option>' + datos.catInsumos.map(i=>`<option value="${i.id}">${i.nombre}</option>`).join('');
+  document.getElementById('movLote').innerHTML = '<option value="">— General —</option>' + datos.lotes.map(l=>`<option value="${l.id}">${l.nombre}</option>`).join('');
+  document.getElementById('pisRegLote').innerHTML = datos.lotes.filter(l=>l.tipo==='piscina').map(l=>`<option value="${l.id}">${l.nombre}</option>`).join('') || '<option value="">Registra una piscina primero</option>';
+  document.getElementById('galRegLote').innerHTML = datos.lotes.filter(l=>l.tipo==='galpon').map(l=>`<option value="${l.id}">${l.nombre}</option>`).join('') || '<option value="">Registra un galpón primero</option>';
+}
+
+// ---------------- Lotes / Piscinas / Galpones ----------------
+const prefixDeTipo = {cultivo:'lote', piscina:'pis', galpon:'gal'};
+let puntosTemp = {lote:[], pis:[], gal:[]};
+let fotosTemp = {lote:[], pis:[], gal:[]};
+
+function agregarPunto(prefix){
+  const lat = document.getElementById(prefix+'PtLat').value.trim();
+  const lng = document.getElementById(prefix+'PtLng').value.trim();
+  if(!lat || !lng){ alert('Ingresa latitud y longitud.'); return; }
+  puntosTemp[prefix].push({lat, lng});
+  document.getElementById(prefix+'PtLat').value=''; document.getElementById(prefix+'PtLng').value='';
+  renderPuntosTemp(prefix);
+}
+function usarUbicacionPunto(prefix){
+  if(!navigator.geolocation){ alert('Geolocalización no disponible en este navegador.'); return; }
+  navigator.geolocation.getCurrentPosition(pos=>{
+    puntosTemp[prefix].push({lat: pos.coords.latitude.toFixed(6), lng: pos.coords.longitude.toFixed(6)});
+    renderPuntosTemp(prefix);
+  }, ()=> alert('No se pudo obtener la ubicación.'));
+}
+function quitarPunto(prefix, idx){ puntosTemp[prefix].splice(idx,1); renderPuntosTemp(prefix); }
+function renderPuntosTemp(prefix){
+  const cont = document.getElementById(prefix+'PuntosLista'); if(!cont) return;
+  cont.innerHTML = puntosTemp[prefix].length ? puntosTemp[prefix].map((p,i)=>
+    `<div>${i+1}. ${p.lat}, ${p.lng} <button class="mini-del" onclick="quitarPunto('${prefix}',${i})">🗑</button></div>`).join('')
+    : '<span class="ayuda">Sin puntos aún — agrega al menos 3 para formar un polígono.</span>';
+}
+function manejarFotos(prefix, input){
+  Array.from(input.files).forEach(f=>{
+    const lector = new FileReader();
+    lector.onload = e=>{
+      const img = new Image();
+      img.onload = ()=>{
+        const canvas = document.createElement('canvas');
+        const escala = Math.min(1, 700/img.width);
+        canvas.width = img.width*escala; canvas.height = img.height*escala;
+        canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+        fotosTemp[prefix].push(canvas.toDataURL('image/jpeg', 0.7));
+        renderFotosTemp(prefix);
+      };
+      img.src = e.target.result;
+    };
+    lector.readAsDataURL(f);
+  });
+  input.value='';
+}
+function renderFotosTemp(prefix){
+  const cont = document.getElementById(prefix+'FotosPreview'); if(!cont) return;
+  cont.innerHTML = fotosTemp[prefix].map((src,i)=>
+    `<div style="position:relative;"><img src="${src}" style="width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid var(--linea);">
+     <button class="mini-del" style="position:absolute;top:-6px;right:-6px;background:#fff;border-radius:50%;" onclick="fotosTemp['${prefix}'].splice(${i},1);renderFotosTemp('${prefix}')">✕</button></div>`).join('');
+}
+
+function guardarLote(tipo){
+  let nombre, extra;
+  const prefix = prefixDeTipo[tipo];
+  if(tipo==='cultivo'){ nombre=document.getElementById('loteNombre').value.trim(); extra={cultivoId:document.getElementById('loteCultivo').value, area:document.getElementById('loteArea').value.trim()}; }
+  if(tipo==='piscina'){ nombre=document.getElementById('pisNombre').value.trim(); extra={especie:document.getElementById('pisEspecie').value.trim(), area:document.getElementById('pisArea').value.trim()}; }
+  if(tipo==='galpon'){ nombre=document.getElementById('galNombre').value.trim(); extra={tipoAve:document.getElementById('galTipo').value, aves:document.getElementById('galAves').value.trim()}; }
+  if(!nombre){ alert('Escribe un nombre.'); return; }
+  datos.lotes.push({id:nid(), tipo, nombre, ...extra, puntos: puntosTemp[prefix].slice(), fotos: fotosTemp[prefix].slice()});
+  guardar();
+  puntosTemp[prefix]=[]; fotosTemp[prefix]=[]; renderPuntosTemp(prefix); renderFotosTemp(prefix);
+  if(tipo==='cultivo'){ document.getElementById('loteNombre').value=''; document.getElementById('loteArea').value=''; renderLotes(); }
+  if(tipo==='piscina'){ document.getElementById('pisNombre').value=''; document.getElementById('pisEspecie').value=''; document.getElementById('pisArea').value=''; renderPiscinas(); }
+  if(tipo==='galpon'){ document.getElementById('galNombre').value=''; document.getElementById('galAves').value=''; renderGalpones(); }
+  renderSelects();
+}
+function borrarLote(id){
+  if(!confirm('¿Eliminar? También se perderá su historial asociado.')) return;
+  datos.lotes = datos.lotes.filter(x=>x.id!==id);
+  datos.registros = datos.registros.filter(r=>r.loteId!==id);
+  datos.registrosPecuarios = datos.registrosPecuarios.filter(r=>r.loteId!==id);
+  guardar(); renderLotes(); renderPiscinas(); renderGalpones(); renderSelects();
+}
+function nombreCultivo(id){ const c=datos.catCultivos.find(x=>x.id===id); return c?c.nombre:'—'; }
+function nombreLote(id){ const l=datos.lotes.find(x=>x.id===id); return l?l.nombre:'—'; }
+function infoGeoFotos(l){
+  const puntos = l.puntos && l.puntos.length ? `📍 ${l.puntos.length} punto(s) de polígono` : '';
+  const fotos = l.fotos && l.fotos.length ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;">${l.fotos.map(f=>`<img src="${f}" style="width:40px;height:40px;object-fit:cover;border-radius:5px;border:1px solid var(--linea);">`).join('')}</div>` : '';
+  return (puntos? `<div class="item-sub">${puntos}</div>`:'') + fotos;
+}
+
+function renderLotes(){
+  const lotes = datos.lotes.filter(l=>l.tipo==='cultivo');
+  document.getElementById('listaLotes').innerHTML = lotes.map(l=>`
+    <div class="item"><div class="item-txt"><div class="item-top">${l.nombre}</div><div class="item-sub">${nombreCultivo(l.cultivoId)} · ${l.area||''}</div>${infoGeoFotos(l)}</div>
+    <div class="item-acc"><button class="mini-del" onclick="borrarLote('${l.id}')">🗑</button></div></div>`).join('') || '<p class="vacio">Sin lotes registrados.</p>';
+}
+function renderPiscinas(){
+  const l = datos.lotes.filter(x=>x.tipo==='piscina');
+  document.getElementById('listaPiscinas').innerHTML = l.map(p=>`
+    <div class="item"><div class="item-txt"><div class="item-top">${p.nombre}</div><div class="item-sub">${p.especie||''} · ${p.area||''}</div>${infoGeoFotos(p)}</div>
+    <div class="item-acc"><button class="mini-del" onclick="borrarLote('${p.id}')">🗑</button></div></div>`).join('') || '<p class="vacio">Sin piscinas.</p>';
+}
+function renderGalpones(){
+  const l = datos.lotes.filter(x=>x.tipo==='galpon');
+  document.getElementById('listaGalpones').innerHTML = l.map(g=>`
+    <div class="item"><div class="item-txt"><div class="item-top">${g.nombre}</div><div class="item-sub">${g.tipoAve||''} · ${g.aves||0} aves</div>${infoGeoFotos(g)}</div>
+    <div class="item-acc"><button class="mini-del" onclick="borrarLote('${g.id}')">🗑</button></div></div>`).join('') || '<p class="vacio">Sin galpones.</p>';
+}
+
+// ---------------- Registro de actividades de cultivo ----------------
+function autocompletarCostoInsumo(){
+  const insumoId = document.getElementById('regInsumo').value;
+  const cantidad = parseFloat(document.getElementById('regCantidad').value)||0;
+  const ins = datos.catInsumos.find(i=>i.id===insumoId);
+  if(ins && ins.costoUnitario){ document.getElementById('regCostoInsumo').value = (ins.costoUnitario*cantidad).toFixed(2); }
+}
+function guardarRegistroActividad(){
+  const loteId = document.getElementById('regLote').value;
+  if(!loteId){ alert('Registra un lote primero.'); return; }
+  const insumoId = document.getElementById('regInsumo').value;
+  const cantidad = parseFloat(document.getElementById('regCantidad').value)||0;
+  if(insumoId && cantidad>0){
+    const ins = datos.catInsumos.find(i=>i.id===insumoId);
+    if(ins) ins.stock = Math.max(0, ins.stock - cantidad);
+  }
+  datos.registros.push({
+    id:nid(), loteId, etapa:document.getElementById('regEtapa').value,
+    actividadId:document.getElementById('regActividad').value,
+    fecha:document.getElementById('regFecha').value || new Date().toISOString().slice(0,10),
+    metodo: document.getElementById('regMetodo').value,
+    insumoId, dosis:document.getElementById('regDosis').value.trim(), dosisUnidad:document.getElementById('regDosisUnidad').value, cantidad,
+    costoInsumo: parseFloat(document.getElementById('regCostoInsumo').value)||0,
+    jornalero:document.getElementById('regJornalero').value.trim(), jornales:document.getElementById('regJornales').value.trim(), costoMO: parseFloat(document.getElementById('regCostoMO').value)||0,
+    notas:document.getElementById('regNotas').value.trim()
+  });
+  guardar();
+  ['regDosis','regCantidad','regCostoInsumo','regJornalero','regJornales','regCostoMO','regNotas'].forEach(i=>document.getElementById(i).value='');
+  renderRegistros(); renderCatalogos(); renderResumen();
+}
+function borrarRegistro(id){ if(!confirm('¿Eliminar este registro?'))return; datos.registros=datos.registros.filter(r=>r.id!==id); guardar(); renderRegistros(); }
+function nombreActividad(id){ const a=datos.catActividades.find(x=>x.id===id); return a?(a.fase+' — '+a.actividad):'—'; }
+
+function renderRegistros(){
+  document.getElementById('listaRegistros').innerHTML = datos.registros.slice().reverse().map(r=>`
+    <div class="item"><div class="item-txt"><div class="item-top">${nombreActividad(r.actividadId)}</div>
+    <div class="item-sub">${nombreLote(r.loteId)} · ${r.etapa} · ${r.fecha}${r.metodo? ' · Método: '+r.metodo:''}${r.dosis? ' · Dosis: '+r.dosis+' '+r.dosisUnidad:''}${r.costoInsumo? ' · Insumo: '+fmt(r.costoInsumo):''}${r.costoMO? ' · M.Obra: '+fmt(r.costoMO):''}</div>
+    ${r.notas? `<div class="item-sub">${r.notas}</div>`:''}</div>
+    <div class="item-acc"><button class="mini-del" onclick="borrarRegistro('${r.id}')">🗑</button></div></div>`).join('') || '<p class="vacio">Sin actividades registradas.</p>';
+}
+
+// ---------------- Registro pecuario (acuicultura/avicultura) ----------------
+function guardarRegistroPecuario(modulo){
+  const pre = modulo==='acuicultura' ? 'pis' : 'gal';
+  const loteId = document.getElementById(pre+'RegLote').value;
+  if(!loteId){ alert('Registra primero una piscina/galpón.'); return; }
+  datos.registrosPecuarios.push({
+    id:nid(), modulo, loteId,
+    actividad: document.getElementById(pre+'Actividad').value,
+    fecha: document.getElementById(pre+'Fecha').value || new Date().toISOString().slice(0,10),
+    detalle: document.getElementById(pre+'Detalle').value.trim(),
+    notas: document.getElementById(pre+'Notas').value.trim()
+  });
+  guardar();
+  document.getElementById(pre+'Detalle').value=''; document.getElementById(pre+'Notas').value='';
+  renderRegPecuarios();
+}
+function borrarRegPecuario(id){ if(!confirm('¿Eliminar?'))return; datos.registrosPecuarios=datos.registrosPecuarios.filter(r=>r.id!==id); guardar(); renderRegPecuarios(); }
+function renderRegPecuarios(){
+  const pis = datos.registrosPecuarios.filter(r=>r.modulo==='acuicultura');
+  const gal = datos.registrosPecuarios.filter(r=>r.modulo==='avicultura');
+  document.getElementById('listaRegPis').innerHTML = pis.slice().reverse().map(r=>`
+    <div class="item"><div class="item-txt"><div class="item-top">${r.actividad}</div><div class="item-sub">${nombreLote(r.loteId)} · ${r.fecha} · ${r.detalle||''}</div></div>
+    <div class="item-acc"><button class="mini-del" onclick="borrarRegPecuario('${r.id}')">🗑</button></div></div>`).join('') || '<p class="vacio">Sin registros.</p>';
+  document.getElementById('listaRegGal').innerHTML = gal.slice().reverse().map(r=>`
+    <div class="item"><div class="item-txt"><div class="item-top">${r.actividad}</div><div class="item-sub">${nombreLote(r.loteId)} · ${r.fecha} · ${r.detalle||''}</div></div>
+    <div class="item-acc"><button class="mini-del" onclick="borrarRegPecuario('${r.id}')">🗑</button></div></div>`).join('') || '<p class="vacio">Sin registros.</p>';
+}
+
+// ---------------- Finanzas ----------------
+function guardarMovimiento(){
+  const monto = parseFloat(document.getElementById('movMonto').value);
+  const rubro = document.getElementById('movRubro').value.trim();
+  if(!rubro || !monto){ alert('Escribe un rubro y un monto válido.'); return; }
+  datos.movimientos.push({id:nid(), tipo:document.getElementById('movTipo').value, fecha:document.getElementById('movFecha').value||new Date().toISOString().slice(0,10), rubro, monto, loteId:document.getElementById('movLote').value, desc:document.getElementById('movDesc').value.trim()});
+  guardar();
+  document.getElementById('movRubro').value=''; document.getElementById('movMonto').value=''; document.getElementById('movDesc').value='';
+  renderMovimientos(); renderResumen();
+}
+function borrarMovimiento(id){ if(!confirm('¿Eliminar movimiento?'))return; datos.movimientos=datos.movimientos.filter(m=>m.id!==id); guardar(); renderMovimientos(); renderResumen(); }
+function fmt(n){ return '$'+ (n||0).toLocaleString('es-EC',{maximumFractionDigits:0}); }
+function renderMovimientos(){
+  document.getElementById('listaMovimientos').innerHTML = datos.movimientos.slice().reverse().map(m=>`
+    <div class="item"><div class="item-txt"><div class="item-top">${m.rubro}<span class="badge ${m.tipo}">${m.tipo}</span></div>
+    <div class="item-sub">${m.fecha}${m.loteId? ' · '+nombreLote(m.loteId):''}${m.desc? ' · '+m.desc:''}</div></div>
+    <div class="item-acc"><span style="font-weight:700;">${fmt(m.monto)}</span> <button class="mini-del" onclick="borrarMovimiento('${m.id}')">🗑</button></div></div>`).join('') || '<p class="vacio">Sin movimientos.</p>';
+}
+
+// ---------------- Resumen / Dashboard ----------------
+function renderResumen(){
+  const costosActividades = datos.registros.reduce((s,r)=> s + (r.costoInsumo||0) + (r.costoMO||0), 0);
+  const ingresos = datos.movimientos.filter(m=>m.tipo==='ingreso').reduce((s,m)=>s+m.monto,0);
+  const gastosMov = datos.movimientos.filter(m=>m.tipo==='gasto').reduce((s,m)=>s+m.monto,0);
+  const gastos = gastosMov + costosActividades;
+  document.getElementById('kpiIngresos').textContent = fmt(ingresos);
+  document.getElementById('kpiEgresos').textContent = fmt(gastos);
+  document.getElementById('kpiBalance').textContent = fmt(ingresos-gastos);
+  const criticos = datos.catInsumos.filter(i=>i.stock <= i.stockMin);
+  document.getElementById('kpiInsumos').textContent = criticos.length;
+  document.getElementById('kpiPendientes').textContent = datos.registros.length + datos.registrosPecuarios.length;
+  document.getElementById('kpiLotes').textContent = datos.lotes.length;
+
+  const porRubro = {};
+  datos.movimientos.filter(m=>m.tipo==='gasto').forEach(m=>{ porRubro[m.rubro]=(porRubro[m.rubro]||0)+m.monto; });
+  const entradas = Object.entries(porRubro).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const max = entradas.length? entradas[0][1]:1;
+  document.getElementById('graficoRubros').innerHTML = entradas.length? entradas.map(([r,v])=>`
+    <div style="margin-bottom:7px;"><div style="display:flex;justify-content:space-between;font-size:.8rem;"><span>${r}</span><span>${fmt(v)}</span></div>
+    <div class="barra-fondo"><div class="barra-rellena" style="width:${v/max*100}%;"></div></div></div>`).join('') : '<p class="vacio">Sin gastos aún.</p>';
+
+  document.getElementById('listaCriticos').innerHTML = criticos.length? criticos.map(i=>`
+    <div class="item"><div class="item-txt">${i.nombre}</div><div class="item-sub">Stock: ${i.stock} / mínimo ${i.stockMin}</div></div>`).join('') : '<p class="vacio">Todo en niveles normales.</p>';
+
+  const ult = [...datos.registros.map(r=>({t:nombreActividad(r.actividadId), f:r.fecha, l:nombreLote(r.loteId)})),
+               ...datos.registrosPecuarios.map(r=>({t:r.actividad, f:r.fecha, l:nombreLote(r.loteId)}))]
+              .sort((a,b)=> (a.f<b.f?1:-1)).slice(0,5);
+  document.getElementById('ultimasAct').innerHTML = ult.length? ult.map(u=>`
+    <div class="item"><div class="item-txt"><div class="item-top">${u.t}</div><div class="item-sub">${u.l} · ${u.f}</div></div></div>`).join('') : '<p class="vacio">Sin actividades aún.</p>';
+
+  renderRentabilidad();
+}
+
+let vistaRentabilidad = 'cultivo';
+function cambiarVistaRentabilidad(v){
+  vistaRentabilidad = v;
+  document.getElementById('tabRentCultivo').classList.toggle('activo', v==='cultivo');
+  document.getElementById('tabRentLote').classList.toggle('activo', v==='lote');
+  renderRentabilidad();
+}
+function costosDeLote(loteId){
+  const gasMov = datos.movimientos.filter(m=>m.tipo==='gasto' && m.loteId===loteId).reduce((s,m)=>s+m.monto,0);
+  const gasAct = datos.registros.filter(r=>r.loteId===loteId).reduce((s,r)=>s+(r.costoInsumo||0)+(r.costoMO||0),0);
+  const ingMov = datos.movimientos.filter(m=>m.tipo==='ingreso' && m.loteId===loteId).reduce((s,m)=>s+m.monto,0);
+  return { ingresos: ingMov, gastos: gasMov + gasAct };
+}
+function renderRentabilidad(){
+  const cont = document.getElementById('rentabilidadCultivos');
+  if(!cont) return;
+  let filas = [];
+  if(vistaRentabilidad==='cultivo'){
+    filas = datos.catCultivos.map(c=>{
+      const lotesDelCultivo = datos.lotes.filter(l=>l.tipo==='cultivo' && l.cultivoId===c.id).map(l=>l.id);
+      const totales = lotesDelCultivo.reduce((acc,id)=>{ const r=costosDeLote(id); acc.ingresos+=r.ingresos; acc.gastos+=r.gastos; return acc; }, {ingresos:0,gastos:0});
+      return {nombre:c.nombre, ...totales};
+    });
+  }else{
+    filas = datos.lotes.map(l=>({nombre: l.nombre + ' ('+(l.tipo==='cultivo'?nombreCultivo(l.cultivoId):l.tipo)+')', ...costosDeLote(l.id)}));
+  }
+  filas = filas.filter(f=>f.ingresos>0 || f.gastos>0).map(f=>({...f, balance: f.ingresos-f.gastos}));
+  if(filas.length===0){ cont.innerHTML='<p class="vacio">Aún no hay ingresos o gastos asociados.</p>'; return; }
+  cont.innerHTML = filas.map(f=>`
+    <div class="item"><div class="item-txt"><div class="item-top">${f.nombre}</div>
+    <div class="item-sub">Ingresos: ${fmt(f.ingresos)} · Gastos: ${fmt(f.gastos)}</div></div>
+    <div class="item-acc"><span style="font-weight:700;color:${f.balance>=0?'var(--tierra)':'var(--rust)'};">${fmt(f.balance)}</span></div></div>`).join('');
+}
+
+// ---------------- Respaldo ----------------
+function exportarDatos(){
+  const blob = new Blob([JSON.stringify(datos,null,2)],{type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='respaldo-finca-amythadel-'+new Date().toISOString().slice(0,10)+'.json'; a.click();
+  URL.revokeObjectURL(url);
+}
+function importarDatos(evento){
+  const f = evento.target.files[0]; if(!f) return;
+  const lector = new FileReader();
+  lector.onload = e=>{
+    try{ const nuevos = JSON.parse(e.target.result);
+      if(confirm('¿Reemplazar todos los datos actuales por este respaldo?')){ datos = nuevos; guardar(); renderTodo(); }
+    }catch(err){ alert('Archivo inválido.'); }
+  };
+  lector.readAsText(f);
+}
+function borrarTodo(){
+  if(confirm('Esto borrará TODOS los datos y las credenciales de acceso. ¿Continuar?')){
+    datos = estadoInicial(); guardar();
+    localStorage.removeItem('finca_auth_v1'); sessionStorage.removeItem('finca_sesion_activa');
+    location.reload();
+  }
+}
+
+function renderTodo(){
+  document.getElementById('tituloApp').textContent = datos.nombreApp;
+  document.getElementById('nombreAppInput').value = datos.nombreApp;
+  renderCatalogos(); renderSelects(); renderLotes(); renderPiscinas(); renderGalpones();
+  renderRegistros(); renderRegPecuarios(); renderMovimientos(); renderResumen();
+}
+
+// ---------------- Autenticación (usuario y contraseña locales) ----------------
+async function hashTexto(texto){
+  const buffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto));
+  return Array.from(new Uint8Array(buffer)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+function cargarAuth(){
+  try{ const raw = localStorage.getItem('finca_auth_v1'); if(raw) return JSON.parse(raw); }catch(e){}
+  return null;
+}
+function guardarAuth(auth){ localStorage.setItem('finca_auth_v1', JSON.stringify(auth)); }
+
+async function crearCredenciales(){
+  const usuario = document.getElementById('setupUsuario').value.trim();
+  const pass = document.getElementById('setupPass').value;
+  const pass2 = document.getElementById('setupPass2').value;
+  const err = document.getElementById('setupError');
+  if(!usuario || !pass){ err.textContent='Completa usuario y contraseña.'; return; }
+  if(pass.length<4){ err.textContent='La contraseña debe tener al menos 4 caracteres.'; return; }
+  if(pass!==pass2){ err.textContent='Las contraseñas no coinciden.'; return; }
+  const hash = await hashTexto(pass);
+  guardarAuth({usuario, hash});
+  entrarAlApp(usuario);
+}
+async function iniciarSesion(){
+  const usuario = document.getElementById('loginUsuario').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  const auth = cargarAuth();
+  const err = document.getElementById('loginError');
+  const hash = await hashTexto(pass);
+  if(auth && usuario===auth.usuario && hash===auth.hash){ entrarAlApp(usuario); }
+  else{ err.textContent = 'Usuario o contraseña incorrectos.'; }
+}
+function entrarAlApp(usuario){
+  sessionStorage.setItem('finca_sesion_activa','1');
+  document.getElementById('loginOverlay').style.display='none';
+  document.getElementById('appWrap').style.display='block';
+  const lbl = document.getElementById('usuarioActualLbl'); if(lbl) lbl.textContent = usuario;
+  renderTodo();
+}
+function cerrarSesion(){
+  sessionStorage.removeItem('finca_sesion_activa');
+  location.reload();
+}
+async function cambiarPassword(){
+  const nueva = document.getElementById('nuevaPassInput').value;
+  if(!nueva || nueva.length<4){ alert('La contraseña debe tener al menos 4 caracteres.'); return; }
+  const auth = cargarAuth();
+  auth.hash = await hashTexto(nueva);
+  guardarAuth(auth);
+  document.getElementById('nuevaPassInput').value='';
+  alert('Contraseña actualizada.');
+}
+
+function iniciarPantallaAcceso(){
+  const auth = cargarAuth();
+  if(!auth){
+    document.getElementById('loginSetupView').style.display='block';
+    document.getElementById('loginEntradaView').style.display='none';
+  }else{
+    document.getElementById('loginSetupView').style.display='none';
+    document.getElementById('loginEntradaView').style.display='block';
+    document.getElementById('loginNombreApp').textContent = datos.nombreApp;
+    if(sessionStorage.getItem('finca_sesion_activa')==='1'){ entrarAlApp(auth.usuario); }
+  }
+}
+iniciarPantallaAcceso();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(()=>{}); });
+}
+</script>
+</body>
+</html>
