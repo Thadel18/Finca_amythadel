@@ -8,6 +8,9 @@
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="theme-color" content="#22432F">
+<script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
 <style>
 :root{
   --tierra:#22432F; --tierra2:#152C1E; --sage:#EDF1E9; --ocre:#C98A2C;
@@ -56,23 +59,16 @@ small.ayuda{color:#7C8A76;font-size:.7rem;display:block;margin-top:3px;}
 
 <div id="loginOverlay" style="position:fixed;inset:0;background:var(--sage);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;">
   <div class="card" style="max-width:360px;width:100%;">
-    <div id="loginSetupView">
-      <strong>Crear acceso a la app</strong>
-      <p style="font-size:.8rem;color:#5A6B54;">Primera vez: crea un usuario y contraseña para proteger los datos de la finca en este dispositivo.</p>
-      <label>Usuario</label><input id="setupUsuario" placeholder="Ej: klever">
-      <label>Contraseña</label><input type="password" id="setupPass">
-      <label>Repetir contraseña</label><input type="password" id="setupPass2">
-      <button class="principal" onclick="crearCredenciales()">Crear usuario</button>
-      <p id="setupError" style="color:var(--rust);font-size:.8rem;"></p>
-    </div>
-    <div id="loginEntradaView" style="display:none;">
-      <strong>Iniciar sesión — <span id="loginNombreApp">Finca Amy&amp;Thadel</span></strong>
-      <label>Usuario</label><input id="loginUsuario">
-      <label>Contraseña</label><input type="password" id="loginPass">
-      <button class="principal" onclick="iniciarSesion()">Ingresar</button>
-      <p id="loginError" style="color:var(--rust);font-size:.8rem;"></p>
-      <small class="ayuda">¿Olvidaste tu contraseña? Solo se puede restablecer borrando los datos de la app desde Ajustes o reinstalándola — no hay recuperación por internet porque la app es offline.</small>
-    </div>
+    <strong>Finca Amy&amp;Thadel</strong>
+    <p style="font-size:.8rem;color:#5A6B54;">Inicia sesión o crea una cuenta para sincronizar los datos de la finca entre tus dispositivos.</p>
+    <label>Correo</label><input type="email" id="authEmail" placeholder="tucorreo@ejemplo.com">
+    <label>Contraseña</label><input type="password" id="authPass" placeholder="Mínimo 6 caracteres">
+    <button class="principal" onclick="iniciarSesion()">Iniciar sesión</button>
+    <button class="sec" style="margin-top:8px;width:100%;" onclick="crearCuenta()">Crear cuenta nueva</button>
+    <button class="sec" style="margin-top:8px;width:100%;border:none;color:var(--agua);" onclick="olvidoPassword()">¿Olvidaste tu contraseña?</button>
+    <p id="authError" style="color:var(--rust);font-size:.8rem;"></p>
+    <p id="authMsg" style="color:var(--tierra);font-size:.8rem;"></p>
+    <small class="ayuda">La primera vez en cada dispositivo necesitas internet para iniciar sesión. Después, la app sigue funcionando sin conexión y sincroniza sola cuando vuelvas a tener internet.</small>
   </div>
 </div>
 
@@ -260,8 +256,9 @@ small.ayuda{color:#7C8A76;font-size:.7rem;display:block;margin-top:3px;}
 <!-- AJUSTES -->
 <section id="ajustes">
   <div class="card">
-    <strong>Seguridad</strong>
-    <p style="font-size:.8rem;color:#5A6B54;">Usuario actual: <span id="usuarioActualLbl">—</span></p>
+    <strong>Cuenta y sincronización</strong>
+    <p style="font-size:.8rem;color:#5A6B54;">Sesión: <span id="usuarioActualLbl">—</span></p>
+    <p id="estadoSync" style="font-size:.78rem;color:var(--agua);">●</p>
     <label>Nueva contraseña</label><input type="password" id="nuevaPassInput">
     <button class="sec" style="margin-top:6px;" onclick="cambiarPassword()">Actualizar contraseña</button>
     <button class="sec" style="margin-top:10px;width:100%;border-color:var(--rust);color:var(--rust);" onclick="cerrarSesion()">Cerrar sesión</button>
@@ -351,7 +348,8 @@ function cargar(){
   try{ const raw = localStorage.getItem('finca_amythadel_v1'); if(raw) return JSON.parse(raw); }catch(e){}
   return estadoInicial();
 }
-function guardar(){ localStorage.setItem('finca_amythadel_v1', JSON.stringify(datos)); }
+function guardarLocal(){ localStorage.setItem('finca_amythadel_v1', JSON.stringify(datos)); }
+function guardar(){ guardarLocal(); sincronizarNube(); }
 
 // ---------------- Navegación ----------------
 document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>{
@@ -725,10 +723,8 @@ function importarDatos(evento){
   lector.readAsText(f);
 }
 function borrarTodo(){
-  if(confirm('Esto borrará TODOS los datos y las credenciales de acceso. ¿Continuar?')){
+  if(confirm('Esto borrará TODOS los datos de la finca para los 3 dispositivos sincronizados. ¿Continuar?')){
     datos = estadoInicial(); guardar();
-    localStorage.removeItem('finca_auth_v1'); sessionStorage.removeItem('finca_sesion_activa');
-    location.reload();
   }
 }
 
@@ -739,72 +735,124 @@ function renderTodo(){
   renderRegistros(); renderRegPecuarios(); renderMovimientos(); renderResumen();
 }
 
-// ---------------- Autenticación (usuario y contraseña locales) ----------------
-async function hashTexto(texto){
-  const buffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto));
-  return Array.from(new Uint8Array(buffer)).map(b=>b.toString(16).padStart(2,'0')).join('');
-}
-function cargarAuth(){
-  try{ const raw = localStorage.getItem('finca_auth_v1'); if(raw) return JSON.parse(raw); }catch(e){}
-  return null;
-}
-function guardarAuth(auth){ localStorage.setItem('finca_auth_v1', JSON.stringify(auth)); }
+// ---------------- Firebase: Auth + Sincronización ----------------
+const firebaseConfig = {
+  apiKey: "AIzaSyD4rnvHB0HIyQtCPY0S6gn8ovAPCSmtG74",
+  authDomain: "finca-amy-thadel.firebaseapp.com",
+  databaseURL: "https://finca-amy-thadel-default-rtdb.firebaseio.com",
+  projectId: "finca-amy-thadel",
+  storageBucket: "finca-amy-thadel.firebasestorage.app",
+  messagingSenderId: "748514897764",
+  appId: "1:748514897764:web:8a03a3fbe1b5fb8248d471",
+  measurementId: "G-4FEQB6MDHD"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+try{ db.enablePersistence({synchronizeTabs:true}); }catch(e){ /* varias pestañas o navegador sin soporte: sigue funcionando online */ }
 
-async function crearCredenciales(){
-  const usuario = document.getElementById('setupUsuario').value.trim();
-  const pass = document.getElementById('setupPass').value;
-  const pass2 = document.getElementById('setupPass2').value;
-  const err = document.getElementById('setupError');
-  if(!usuario || !pass){ err.textContent='Completa usuario y contraseña.'; return; }
-  if(pass.length<4){ err.textContent='La contraseña debe tener al menos 4 caracteres.'; return; }
-  if(pass!==pass2){ err.textContent='Las contraseñas no coinciden.'; return; }
-  const hash = await hashTexto(pass);
-  guardarAuth({usuario, hash});
-  entrarAlApp(usuario);
+const DOC_FINCA = db.collection('fincas').doc('principal');
+let aplicandoSnapshot = false;
+let listenerActivo = null;
+
+function mapaErrorAuth(e){
+  const m = {
+    'auth/wrong-password':'Contraseña incorrecta.',
+    'auth/user-not-found':'No existe una cuenta con ese correo. Usa "Crear cuenta nueva".',
+    'auth/email-already-in-use':'Ya existe una cuenta con ese correo — usa "Iniciar sesión".',
+    'auth/weak-password':'La contraseña debe tener al menos 6 caracteres.',
+    'auth/invalid-email':'Correo inválido.',
+    'auth/missing-password':'Escribe una contraseña.',
+    'auth/network-request-failed':'Sin conexión a internet. Necesitas internet para iniciar sesión la primera vez.'
+  };
+  return m[e.code] || e.message;
 }
+function limpiarMensajesAuth(){ document.getElementById('authError').textContent=''; document.getElementById('authMsg').textContent=''; }
+
 async function iniciarSesion(){
-  const usuario = document.getElementById('loginUsuario').value.trim();
-  const pass = document.getElementById('loginPass').value;
-  const auth = cargarAuth();
-  const err = document.getElementById('loginError');
-  const hash = await hashTexto(pass);
-  if(auth && usuario===auth.usuario && hash===auth.hash){ entrarAlApp(usuario); }
-  else{ err.textContent = 'Usuario o contraseña incorrectos.'; }
+  limpiarMensajesAuth();
+  const email = document.getElementById('authEmail').value.trim();
+  const pass = document.getElementById('authPass').value;
+  try{ await auth.signInWithEmailAndPassword(email, pass); }
+  catch(e){ document.getElementById('authError').textContent = mapaErrorAuth(e); }
 }
-function entrarAlApp(usuario){
-  sessionStorage.setItem('finca_sesion_activa','1');
-  document.getElementById('loginOverlay').style.display='none';
-  document.getElementById('appWrap').style.display='block';
-  const lbl = document.getElementById('usuarioActualLbl'); if(lbl) lbl.textContent = usuario;
-  renderTodo();
+async function crearCuenta(){
+  limpiarMensajesAuth();
+  const email = document.getElementById('authEmail').value.trim();
+  const pass = document.getElementById('authPass').value;
+  try{ await auth.createUserWithEmailAndPassword(email, pass); }
+  catch(e){ document.getElementById('authError').textContent = mapaErrorAuth(e); }
 }
-function cerrarSesion(){
-  sessionStorage.removeItem('finca_sesion_activa');
-  location.reload();
+async function olvidoPassword(){
+  limpiarMensajesAuth();
+  const email = document.getElementById('authEmail').value.trim();
+  if(!email){ document.getElementById('authError').textContent='Escribe tu correo arriba primero.'; return; }
+  try{ await auth.sendPasswordResetEmail(email); document.getElementById('authMsg').textContent='Te enviamos un correo para restablecer tu contraseña.'; }
+  catch(e){ document.getElementById('authError').textContent = mapaErrorAuth(e); }
 }
 async function cambiarPassword(){
   const nueva = document.getElementById('nuevaPassInput').value;
-  if(!nueva || nueva.length<4){ alert('La contraseña debe tener al menos 4 caracteres.'); return; }
-  const auth = cargarAuth();
-  auth.hash = await hashTexto(nueva);
-  guardarAuth(auth);
-  document.getElementById('nuevaPassInput').value='';
-  alert('Contraseña actualizada.');
-}
-
-function iniciarPantallaAcceso(){
-  const auth = cargarAuth();
-  if(!auth){
-    document.getElementById('loginSetupView').style.display='block';
-    document.getElementById('loginEntradaView').style.display='none';
-  }else{
-    document.getElementById('loginSetupView').style.display='none';
-    document.getElementById('loginEntradaView').style.display='block';
-    document.getElementById('loginNombreApp').textContent = datos.nombreApp;
-    if(sessionStorage.getItem('finca_sesion_activa')==='1'){ entrarAlApp(auth.usuario); }
+  if(!nueva || nueva.length<6){ alert('La contraseña debe tener al menos 6 caracteres.'); return; }
+  try{
+    await auth.currentUser.updatePassword(nueva);
+    document.getElementById('nuevaPassInput').value='';
+    alert('Contraseña actualizada.');
+  }catch(e){
+    if(e.code==='auth/requires-recent-login'){ alert('Por seguridad, cierra sesión y vuelve a iniciar sesión antes de cambiar la contraseña.'); }
+    else{ alert('No se pudo actualizar: '+e.message); }
   }
 }
-iniciarPantallaAcceso();
+function cerrarSesion(){
+  if(listenerActivo){ listenerActivo(); listenerActivo=null; }
+  auth.signOut();
+}
+
+// Quita las fotos antes de enviar a la nube (Firestore limita cada documento a 1MB;
+// las fotos se quedan guardadas solo en el dispositivo donde se tomaron).
+function prepararParaNube(d){
+  const copia = JSON.parse(JSON.stringify(d));
+  copia.lotes = copia.lotes.map(l=>{ const {fotos, ...resto} = l; return resto; });
+  return copia;
+}
+function sincronizarNube(){
+  if(aplicandoSnapshot) return;
+  DOC_FINCA.set(prepararParaNube(datos)).catch(()=>{ /* sin internet: se reintentará solo cuando vuelva la conexión */ });
+}
+
+function iniciarEscuchaNube(){
+  if(listenerActivo) return;
+  listenerActivo = DOC_FINCA.onSnapshot(snap=>{
+    const estado = document.getElementById('estadoSync');
+    if(estado) estado.textContent = snap.metadata.fromCache ? '● Sin conexión — usando datos locales' : '● Sincronizado con la nube';
+    if(snap.exists && !snap.metadata.hasPendingWrites){
+      aplicandoSnapshot = true;
+      const fotosPorLote = {}; datos.lotes.forEach(l=>{ if(l.fotos) fotosPorLote[l.id]=l.fotos; });
+      const nube = snap.data();
+      nube.lotes = (nube.lotes||[]).map(l=>({...l, fotos: fotosPorLote[l.id] || l.fotos || []}));
+      datos = nube;
+      guardarLocal();
+      renderTodo();
+      aplicandoSnapshot = false;
+    }
+  }, err=>{ console.warn('Sync error', err); });
+}
+
+function entrarAlApp(email){
+  document.getElementById('loginOverlay').style.display='none';
+  document.getElementById('appWrap').style.display='block';
+  const lbl = document.getElementById('usuarioActualLbl'); if(lbl) lbl.textContent = email;
+  renderTodo();
+  iniciarEscuchaNube();
+}
+
+auth.onAuthStateChanged(user=>{
+  if(user){ entrarAlApp(user.email); }
+  else{
+    if(listenerActivo){ listenerActivo(); listenerActivo=null; }
+    document.getElementById('loginOverlay').style.display='flex';
+    document.getElementById('appWrap').style.display='none';
+  }
+});
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(()=>{}); });
