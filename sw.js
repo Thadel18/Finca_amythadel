@@ -1,4 +1,4 @@
-const CACHE_NAME = 'finca-amythadel-cache-v5';
+const CACHE_NAME = 'finca-amythadel-cache-v6';
 const LOCALES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 const EXTERNOS = [
   'https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js',

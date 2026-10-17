@@ -667,7 +667,6 @@ function renderResumen(){
   document.getElementById('kpiBalance').textContent = fmt(ingresos-gastos);
   const criticos = datos.catInsumos.filter(i=>i.stock <= i.stockMin);
   document.getElementById('kpiInsumos').textContent = criticos.length;
-  document.getElementById('kpiPendientes').textContent = datos.registros.length + datos.registrosPecuarios.length;
   document.getElementById('kpiLotes').textContent = datos.lotes.length;
 
   const porRubro = {};
@@ -1024,7 +1023,7 @@ function entrarAlApp(email){
   document.getElementById('loginOverlay').style.display='none';
   document.getElementById('appWrap').style.display='block';
   const lbl = document.getElementById('usuarioActualLbl'); if(lbl) lbl.textContent = email;
-  renderTodo();
+  try{ renderTodo(); }catch(e){ console.warn('Error al dibujar', e); }
   actualizarEstado();
   iniciarEscuchaNube();
   if(!window._syncEventos){
