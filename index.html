@@ -74,7 +74,11 @@ small.ayuda{color:#7C8A76;font-size:.7rem;display:block;margin-top:3px;}
 
 <div id="appWrap" style="display:none;">
 <header><h1 id="tituloApp">FINCA AMY&THADEL</h1>
-<p>Comunidad Kichwa Omagua San Francisco · Enokanqui · La Joya de los Sachas, Orellana</p></header>
+<p>Comunidad Kichwa Omagua San Francisco · Enokanqui · La Joya de los Sachas, Orellana</p>
+<div style="margin-top:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+  <button id="btnSync" class="sec" onclick="sincronizarAhora()">⟳ Sincronizar ahora</button>
+  <span id="estadoSyncTop" style="font-size:.72rem;color:#CBD9C6;"></span>
+</div></header>
 
 <nav>
   <button data-tab="resumen" class="activo">Resumen</button>
@@ -259,6 +263,9 @@ small.ayuda{color:#7C8A76;font-size:.7rem;display:block;margin-top:3px;}
     <strong>Cuenta y sincronización</strong>
     <p style="font-size:.8rem;color:#5A6B54;">Sesión: <span id="usuarioActualLbl">—</span></p>
     <p id="estadoSync" style="font-size:.78rem;color:var(--agua);">●</p>
+    <button class="sec" style="width:100%;margin-bottom:8px;" onclick="sincronizarAhora()">⟳ Sincronizar ahora</button>
+    <button class="sec" style="width:100%;margin-bottom:8px;" onclick="restaurarRespaldo()">☁ Restaurar último respaldo de la nube</button>
+    <small class="ayuda">El respaldo se actualiza cada vez que sincronizas con internet. Las fotos también se guardan en la nube.</small>
     <label>Nueva contraseña</label><input type="password" id="nuevaPassInput">
     <button class="sec" style="margin-top:6px;" onclick="cambiarPassword()">Actualizar contraseña</button>
     <button class="sec" style="margin-top:10px;width:100%;border-color:var(--rust);color:var(--rust);" onclick="cerrarSesion()">Cerrar sesión</button>
@@ -343,13 +350,25 @@ function estadoInicial(){
 }
 function nid(){ return Math.random().toString(36).slice(2,9); }
 
+let localNuevo = false;
 let datos = cargar();
 function cargar(){
   try{ const raw = localStorage.getItem('finca_amythadel_v1'); if(raw) return JSON.parse(raw); }catch(e){}
+  localNuevo = true;
   return estadoInicial();
 }
 function guardarLocal(){ localStorage.setItem('finca_amythadel_v1', JSON.stringify(datos)); }
-function guardar(){ guardarLocal(); sincronizarNube(); }
+function guardar(){
+  if(!datos.eliminados) datos.eliminados = [];
+  const ahora = coleccionarIds(datos);
+  ultimoEstadoIds.forEach(id=>{ if(!ahora.has(id) && !datos.eliminados.includes(id)) datos.eliminados.push(id); });
+  ultimoEstadoIds = ahora;
+  versionLocal++;
+  localStorage.setItem('finca_pendiente_sync','1');
+  guardarLocal();
+  sincronizarNube();
+  actualizarEstado();
+}
 
 // ---------------- Navegación ----------------
 document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>{
@@ -722,8 +741,9 @@ function importarDatos(evento){
   };
   lector.readAsText(f);
 }
-function borrarTodo(){
-  if(confirm('Esto borrará TODOS los datos de la finca para los 3 dispositivos sincronizados. ¿Continuar?')){
+async function borrarTodo(){
+  if(confirm('Esto borrará TODOS los datos de la finca en los dispositivos sincronizados. Antes se guarda un respaldo en la nube que podrás restaurar desde Ajustes. ¿Continuar?')){
+    try{ if(db && navigator.onLine){ await db.collection('fincas').doc('respaldo').set({fecha:new Date().toISOString(), datos:prepararParaNube(datos)}); } }catch(e){}
     datos = estadoInicial(); guardar();
   }
 }
@@ -813,33 +833,189 @@ function cerrarSesion(){
   if(auth){ auth.signOut(); } else { location.reload(); }
 }
 
-// Quita las fotos antes de enviar a la nube (Firestore limita cada documento a 1MB;
-// las fotos se quedan guardadas solo en el dispositivo donde se tomaron).
+// ---------- Sincronización con la nube ----------
+const COLECCIONES = ['catCultivos','catActividades','catInsumos','lotes','registros','registrosPecuarios','movimientos'];
+function coleccionarIds(d){ const st=new Set(); COLECCIONES.forEach(c=>(d[c]||[]).forEach(x=>st.add(x.id))); return st; }
+let ultimoEstadoIds = coleccionarIds(datos);
+let primeraSyncHecha = false;
+let sincronizando = false;
+let versionLocal = 0;
+
+// Identificador estable de una foto (se calcula a partir de su contenido)
+function idFoto(src){
+  let h = 5381;
+  for(let i=0;i<src.length;i++){ h = ((h<<5)+h+src.charCodeAt(i))|0; }
+  return 'f'+(h>>>0).toString(36)+src.length.toString(36);
+}
+
+// Quita las fotos del documento principal (límite de 1MB por documento);
+// las fotos viajan aparte, una por documento, en la colección "fotos".
 function prepararParaNube(d){
   const copia = JSON.parse(JSON.stringify(d));
-  copia.lotes = copia.lotes.map(l=>{ const {fotos, ...resto} = l; return resto; });
+  copia.lotes = (copia.lotes||[]).map(l=>{
+    const {fotos, ...resto} = l;
+    resto.fotoIds = Array.from(new Set([...(l.fotoIds||[]), ...(fotos||[]).map(idFoto)]));
+    return resto;
+  });
   return copia;
 }
+
+// Une los datos locales con los de la nube sin perder lo que hizo cada dispositivo
+function fusionar(local, nube){
+  const elim = new Set([...(local.eliminados||[]), ...(nube.eliminados||[])]);
+  const sucio = localStorage.getItem('finca_pendiente_sync')==='1';
+  const res = {...nube};
+  res.nombreApp = sucio ? local.nombreApp : nube.nombreApp;
+  res.eliminados = Array.from(elim);
+  res.siguienteId = Math.max(local.siguienteId||1, nube.siguienteId||1);
+  COLECCIONES.forEach(c=>{
+    const mapa = new Map();
+    (nube[c]||[]).forEach(x=>mapa.set(x.id, x));
+    (local[c]||[]).forEach(x=>{
+      if(!mapa.has(x.id)) mapa.set(x.id, x);
+      else if(sucio) mapa.set(x.id, {...mapa.get(x.id), ...x});
+    });
+    res[c] = Array.from(mapa.values()).filter(x=>!elim.has(x.id));
+  });
+  const locales = new Map((local.lotes||[]).map(l=>[l.id,l]));
+  const remotos = new Map((nube.lotes||[]).map(l=>[l.id,l]));
+  res.lotes = res.lotes.map(l=>{
+    const lo = locales.get(l.id)||{}, re = remotos.get(l.id)||{};
+    return {...l, fotos: lo.fotos || [], fotoIds: Array.from(new Set([...(lo.fotoIds||[]), ...(re.fotoIds||[])]))};
+  });
+  return res;
+}
+
+function textoEstado(){
+  const ult = localStorage.getItem('finca_ultima_sync');
+  const hora = ult ? new Date(ult).toLocaleString('es-EC',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : 'nunca';
+  if(!firebaseDisponible) return '● Modo local (sin componentes de sincronización)';
+  if(!navigator.onLine) return localStorage.getItem('finca_pendiente_sync')==='1' ? '● Sin conexión — cambios pendientes de subir' : '● Sin conexión — datos locales al día ('+hora+')';
+  if(localStorage.getItem('finca_pendiente_sync')==='1') return '● Cambios pendientes — presiona Sincronizar';
+  return '● Sincronizado ('+hora+')';
+}
+function actualizarEstado(){
+  const t = textoEstado();
+  ['estadoSync','estadoSyncTop'].forEach(id=>{ const el=document.getElementById(id); if(el) el.textContent=t; });
+}
+function marcarSync(){ localStorage.setItem('finca_ultima_sync', new Date().toISOString()); actualizarEstado(); }
+function botonSync(ocupado){
+  const b=document.getElementById('btnSync'); if(!b) return;
+  b.disabled = ocupado; b.textContent = ocupado ? '⟳ Sincronizando...' : '⟳ Sincronizar ahora';
+}
+
+async function sincronizarFotos(){
+  if(!db) return;
+  const subidas = new Set(JSON.parse(localStorage.getItem('finca_fotos_subidas')||'[]'));
+  for(const l of datos.lotes){
+    for(const src of (l.fotos||[])){
+      const id = idFoto(src);
+      if(subidas.has(id)) continue;
+      try{ await db.collection('fotos').doc(id).set({data:src, loteId:l.id, ts:Date.now()}); subidas.add(id); }catch(e){}
+    }
+  }
+  localStorage.setItem('finca_fotos_subidas', JSON.stringify(Array.from(subidas)));
+  let cambio = false;
+  for(const l of datos.lotes){
+    const tengo = new Set((l.fotos||[]).map(idFoto));
+    for(const id of (l.fotoIds||[])){
+      if(tengo.has(id)) continue;
+      try{
+        const doc = await db.collection('fotos').doc(id).get();
+        if(doc.exists){ (l.fotos = l.fotos||[]).push(doc.data().data); tengo.add(id); cambio = true; }
+      }catch(e){}
+    }
+  }
+  if(cambio){ guardarLocal(); renderLotes(); renderPiscinas(); renderGalpones(); }
+}
+
 function sincronizarNube(){
-  if(aplicandoSnapshot || !DOC_FINCA) return;
-  DOC_FINCA.set(prepararParaNube(datos)).catch(()=>{ /* sin internet: se reintentará solo cuando vuelva la conexión */ });
+  if(aplicandoSnapshot || !DOC_FINCA || !primeraSyncHecha || !navigator.onLine) return;
+  const v = versionLocal;
+  DOC_FINCA.set(prepararParaNube(datos)).then(()=>{
+    if(v===versionLocal) localStorage.removeItem('finca_pendiente_sync');
+    marcarSync();
+    sincronizarFotos();
+  }).catch(()=>{ /* se reintentará al sincronizar */ });
+}
+
+// Aplica lo que hay en la nube (null = todavía no existe) sobre este dispositivo
+function aplicarNube(nube){
+  aplicandoSnapshot = true;
+  try{
+    if(nube){
+      if(localNuevo){
+        // Dispositivo nuevo o app reinstalada: se recupera todo desde la nube
+        nube.eliminados = nube.eliminados || [];
+        nube.lotes = (nube.lotes||[]).map(l=>({...l, fotos: []}));
+        datos = nube;
+        localNuevo = false;
+        localStorage.removeItem('finca_pendiente_sync');
+        localStorage.removeItem('finca_fotos_subidas');
+      }else{
+        datos = fusionar(datos, nube);
+      }
+      ultimoEstadoIds = coleccionarIds(datos);
+      guardarLocal();
+      renderTodo();
+    }
+    primeraSyncHecha = true;
+  } finally { aplicandoSnapshot = false; }
+  if(!nube || localStorage.getItem('finca_pendiente_sync')==='1'){ sincronizarNube(); }
+  else { sincronizarFotos(); }
+  actualizarEstado();
+}
+
+async function sincronizarAhora(silencioso){
+  if(silencioso && silencioso.type) silencioso = false; // llamado desde un evento
+  if(!firebaseDisponible){ if(!silencioso) alert('La app abrió sin los componentes de sincronización. Ciérrala y ábrela de nuevo con internet.'); return; }
+  if(!auth.currentUser) return;
+  if(!navigator.onLine){ if(!silencioso) alert('Sin internet por ahora. Tus datos están guardados en el celular y se subirán solos cuando vuelva la conexión.'); return; }
+  if(sincronizando) return;
+  sincronizando = true; botonSync(true);
+  try{
+    const snap = await DOC_FINCA.get({source:'server'});
+    aplicarNube(snap.exists ? snap.data() : null);
+    const v = versionLocal;
+    await DOC_FINCA.set(prepararParaNube(datos));
+    if(v===versionLocal) localStorage.removeItem('finca_pendiente_sync');
+    await sincronizarFotos();
+    await db.collection('fincas').doc('respaldo').set({fecha:new Date().toISOString(), datos:prepararParaNube(datos)});
+    marcarSync();
+    if(!silencioso) alert('Sincronización completa ✔');
+  }catch(e){
+    if(!silencioso) alert('No se pudo sincronizar: '+(e.message||e));
+  }finally{
+    sincronizando = false; botonSync(false); actualizarEstado();
+  }
+}
+
+async function restaurarRespaldo(){
+  if(!firebaseDisponible || !navigator.onLine){ alert('Necesitas internet para restaurar el respaldo de la nube.'); return; }
+  try{
+    const snap = await db.collection('fincas').doc('respaldo').get();
+    if(!snap.exists){ alert('Todavía no hay respaldo en la nube. Se crea cuando presionas "Sincronizar ahora".'); return; }
+    const r = snap.data();
+    const fecha = r.fecha ? new Date(r.fecha).toLocaleString('es-EC') : '(sin fecha)';
+    if(!confirm('Esto reemplazará los datos actuales por el respaldo del '+fecha+'. ¿Continuar?')) return;
+    const idsResp = coleccionarIds(r.datos);
+    const fotosLocal = {}; datos.lotes.forEach(l=>{ if(l.fotos) fotosLocal[l.id]=l.fotos; });
+    const nuevo = r.datos;
+    nuevo.eliminados = (datos.eliminados||[]).filter(id=>!idsResp.has(id));
+    nuevo.lotes = (nuevo.lotes||[]).map(l=>({...l, fotos: fotosLocal[l.id]||[]}));
+    ultimoEstadoIds = coleccionarIds(datos);
+    datos = nuevo;
+    guardar(); renderTodo();
+    sincronizarAhora(true);
+    alert('Respaldo restaurado.');
+  }catch(e){ alert('No se pudo restaurar: '+(e.message||e)); }
 }
 
 function iniciarEscuchaNube(){
   if(listenerActivo || !DOC_FINCA) return;
   listenerActivo = DOC_FINCA.onSnapshot(snap=>{
-    const estado = document.getElementById('estadoSync');
-    if(estado) estado.textContent = snap.metadata.fromCache ? '● Sin conexión — usando datos locales' : '● Sincronizado con la nube';
-    if(snap.exists && !snap.metadata.hasPendingWrites){
-      aplicandoSnapshot = true;
-      const fotosPorLote = {}; datos.lotes.forEach(l=>{ if(l.fotos) fotosPorLote[l.id]=l.fotos; });
-      const nube = snap.data();
-      nube.lotes = (nube.lotes||[]).map(l=>({...l, fotos: fotosPorLote[l.id] || l.fotos || []}));
-      datos = nube;
-      guardarLocal();
-      renderTodo();
-      aplicandoSnapshot = false;
-    }
+    if(snap.metadata.fromCache || snap.metadata.hasPendingWrites) { actualizarEstado(); return; }
+    aplicarNube(snap.exists ? snap.data() : null);
   }, err=>{ console.warn('Sync error', err); });
 }
 
@@ -849,7 +1025,14 @@ function entrarAlApp(email){
   document.getElementById('appWrap').style.display='block';
   const lbl = document.getElementById('usuarioActualLbl'); if(lbl) lbl.textContent = email;
   renderTodo();
+  actualizarEstado();
   iniciarEscuchaNube();
+  if(!window._syncEventos){
+    window._syncEventos = true;
+    window.addEventListener('online', ()=>{ actualizarEstado(); sincronizarAhora(true); });
+    window.addEventListener('offline', actualizarEstado);
+    setInterval(()=>sincronizarAhora(true), 5*60*1000);
+  }
 }
 
 if(auth){
