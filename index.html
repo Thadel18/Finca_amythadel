@@ -746,12 +746,17 @@ const firebaseConfig = {
   appId: "1:748514897764:web:8a03a3fbe1b5fb8248d471",
   measurementId: "G-4FEQB6MDHD"
 };
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
-try{ db.enablePersistence({synchronizeTabs:true}); }catch(e){ /* varias pestañas o navegador sin soporte: sigue funcionando online */ }
+// Si los scripts de Firebase no cargan (sin internet y sin caché), la app sigue abriendo en modo local.
+const firebaseDisponible = (typeof firebase !== 'undefined');
+let auth = null, db = null;
+if(firebaseDisponible){
+  firebase.initializeApp(firebaseConfig);
+  auth = firebase.auth();
+  db = firebase.firestore();
+  try{ db.enablePersistence({synchronizeTabs:true}).catch(()=>{}); }catch(e){}
+}
 
-const DOC_FINCA = db.collection('fincas').doc('principal');
+const DOC_FINCA = firebaseDisponible ? db.collection('fincas').doc('principal') : null;
 let aplicandoSnapshot = false;
 let listenerActivo = null;
 
@@ -804,7 +809,8 @@ async function cambiarPassword(){
 }
 function cerrarSesion(){
   if(listenerActivo){ listenerActivo(); listenerActivo=null; }
-  auth.signOut();
+  localStorage.removeItem('finca_ultimo_usuario');
+  if(auth){ auth.signOut(); } else { location.reload(); }
 }
 
 // Quita las fotos antes de enviar a la nube (Firestore limita cada documento a 1MB;
@@ -815,12 +821,12 @@ function prepararParaNube(d){
   return copia;
 }
 function sincronizarNube(){
-  if(aplicandoSnapshot) return;
+  if(aplicandoSnapshot || !DOC_FINCA) return;
   DOC_FINCA.set(prepararParaNube(datos)).catch(()=>{ /* sin internet: se reintentará solo cuando vuelva la conexión */ });
 }
 
 function iniciarEscuchaNube(){
-  if(listenerActivo) return;
+  if(listenerActivo || !DOC_FINCA) return;
   listenerActivo = DOC_FINCA.onSnapshot(snap=>{
     const estado = document.getElementById('estadoSync');
     if(estado) estado.textContent = snap.metadata.fromCache ? '● Sin conexión — usando datos locales' : '● Sincronizado con la nube';
@@ -838,6 +844,7 @@ function iniciarEscuchaNube(){
 }
 
 function entrarAlApp(email){
+  localStorage.setItem('finca_ultimo_usuario', email);
   document.getElementById('loginOverlay').style.display='none';
   document.getElementById('appWrap').style.display='block';
   const lbl = document.getElementById('usuarioActualLbl'); if(lbl) lbl.textContent = email;
@@ -845,6 +852,7 @@ function entrarAlApp(email){
   iniciarEscuchaNube();
 }
 
+if(auth){
 auth.onAuthStateChanged(user=>{
   if(user){ entrarAlApp(user.email); }
   else{
@@ -853,6 +861,17 @@ auth.onAuthStateChanged(user=>{
     document.getElementById('appWrap').style.display='none';
   }
 });
+}else{
+  // Modo local: sin scripts de Firebase (sin internet). Entra si ya iniciaste sesión antes en este dispositivo.
+  const ultimo = localStorage.getItem('finca_ultimo_usuario');
+  if(ultimo){
+    entrarAlApp(ultimo);
+    const estado = document.getElementById('estadoSync');
+    if(estado) estado.textContent = '● Sin conexión — usando datos locales (recarga con internet para sincronizar)';
+  }else{
+    document.getElementById('authError').textContent = 'Sin internet: la primera vez en este dispositivo debes iniciar sesión con conexión.';
+  }
+}
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(()=>{}); });
