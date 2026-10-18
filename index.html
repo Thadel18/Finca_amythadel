@@ -57,6 +57,9 @@ small.ayuda{color:#7C8A76;font-size:.7rem;display:block;margin-top:3px;}
 .info-fila:last-child{border-bottom:none;} .info-fila span:first-child{color:#5A6B54;} .info-fila span:last-child{font-weight:600;text-align:right;}
 .geo-calc{margin-top:6px;font-size:.78rem;color:var(--tierra);background:#E4EEDD;border-radius:7px;padding:6px 8px;}
 .geo-calc:empty{display:none;}
+.btn-foto{display:inline-block;margin:0;padding:8px 12px;border:1px solid var(--tierra);border-radius:7px;background:#fff;color:var(--tierra);font-size:.82rem;font-weight:600;cursor:pointer;}
+#fabFoto{position:fixed;right:16px;bottom:18px;z-index:40;width:58px;height:58px;border-radius:50%;background:var(--ocre);color:#fff;border:none;font-size:1.6rem;box-shadow:0 3px 10px rgba(0,0,0,.3);cursor:pointer;}
+#toast{display:none;position:fixed;left:50%;bottom:90px;transform:translateX(-50%);max-width:88%;background:rgba(21,44,30,.95);color:#fff;padding:10px 14px;border-radius:10px;font-size:.84rem;z-index:300;text-align:center;}
 </style>
 </head>
 <body>
@@ -77,6 +80,7 @@ small.ayuda{color:#7C8A76;font-size:.7rem;display:block;margin-top:3px;}
 </div>
 
 <div id="appWrap" style="display:none;">
+<button id="fabFoto" title="Foto rápida" onclick="abrirFotoRapida()">📷</button>
 <header><h1 id="tituloApp">FINCA AMY&THADEL</h1>
 <p>Comunidad Kichwa Omagua San Francisco · Enokanqui · La Joya de los Sachas, Orellana</p>
 <div style="margin-top:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
@@ -136,7 +140,7 @@ small.ayuda{color:#7C8A76;font-size:.7rem;display:block;margin-top:3px;}
     <div id="lotePuntosLista" style="margin-top:6px;font-size:.78rem;"></div>
     <div id="loteGeoCalc" class="geo-calc"></div>
     <div class="subgrupo">Fotos del lote (opcional)</div>
-    <input type="file" id="loteFotosInput" accept="image/*" multiple onchange="manejarFotos('lote', this)">
+    <div class="foto-botones" data-prefix="lote"></div>
     <div id="loteFotosPreview" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;"></div>
     <button class="principal" onclick="guardarLote('cultivo')">Guardar lote</button>
   </div>
@@ -169,7 +173,7 @@ small.ayuda{color:#7C8A76;font-size:.7rem;display:block;margin-top:3px;}
     </div>
     <label>Notas</label><textarea id="regNotas"></textarea>
     <div class="subgrupo">Fotos de la actividad (opcional)</div>
-    <input type="file" accept="image/*" multiple onchange="manejarFotos('reg', this)">
+    <div class="foto-botones" data-prefix="reg"></div>
     <div id="regFotosPreview" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;"></div>
     <button class="principal" onclick="guardarRegistroActividad()">Guardar actividad</button>
   </div>
@@ -193,6 +197,11 @@ small.ayuda{color:#7C8A76;font-size:.7rem;display:block;margin-top:3px;}
     <label>Nombre</label><input id="pisNombre" placeholder="Ej: Piscina Tilapia A">
     <label>Especie</label><input id="pisEspecie" placeholder="Ej: Tilapia, Cachama">
     <label>Área / volumen</label><input id="pisArea" placeholder="Ej: 300 m³">
+    <div class="fila2">
+      <div><label>Fecha de siembra</label><input type="date" id="pisFechaSiembra"></div>
+      <div><label>Peces sembrados (cantidad inicial)</label><input type="number" id="pisCantidad" placeholder="Ej: 1500"></div>
+    </div>
+    <small class="ayuda">Si registras aquí la cantidad inicial, no la repitas luego como actividad de "Siembra".</small>
     <div class="subgrupo">Vértices del polígono (opcional)</div>
     <div class="fila3">
       <input id="pisPtLat" placeholder="Latitud">
@@ -203,7 +212,7 @@ small.ayuda{color:#7C8A76;font-size:.7rem;display:block;margin-top:3px;}
     <div id="pisPuntosLista" style="margin-top:6px;font-size:.78rem;"></div>
     <div id="pisGeoCalc" class="geo-calc"></div>
     <div class="subgrupo">Fotos (opcional)</div>
-    <input type="file" id="pisFotosInput" accept="image/*" multiple onchange="manejarFotos('pis', this)">
+    <div class="foto-botones" data-prefix="pis"></div>
     <div id="pisFotosPreview" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;"></div>
     <button class="principal" onclick="guardarLote('piscina')">Guardar piscina</button>
   </div>
@@ -212,12 +221,17 @@ small.ayuda{color:#7C8A76;font-size:.7rem;display:block;margin-top:3px;}
     <strong>Registrar manejo</strong>
     <label>Piscina</label><select id="pisRegLote"></select>
     <label>Actividad</label>
-    <select id="pisActividad"><option>Siembra de alevines</option><option>Alimentación</option><option>Muestreo</option><option>Recambio de agua</option><option>Cosecha</option><option>Sanidad</option></select>
+    <select id="pisActividad" onchange="pistaPecuaria('pis')"><option>Siembra de alevines</option><option>Alimentación</option><option>Muestreo</option><option>Recambio de agua</option><option>Cosecha</option><option>Sanidad</option><option>Mortalidad</option><option>Ajuste de inventario</option></select>
     <label>Fecha</label><input type="date" id="pisFecha">
-    <label>Cantidad / detalle</label><input id="pisDetalle" placeholder="Ej: 500 alevines, 5kg balanceado">
+    <div class="fila2">
+      <div><label>Cantidad (n.º)</label><input type="number" id="pisActCantidad" placeholder="Ej: 500"></div>
+      <div><label>Peso (libras)</label><input type="number" step="0.1" id="pisActLibras" placeholder="Ej: 120"></div>
+    </div>
+    <small class="ayuda" id="pisPista"></small>
+    <label>Detalle (opcional)</label><input id="pisDetalle" placeholder="Ej: balanceado 35% proteína">
     <label>Notas</label><textarea id="pisNotas"></textarea>
     <div class="subgrupo">Fotos (opcional)</div>
-    <input type="file" accept="image/*" multiple onchange="manejarFotos('pisReg', this)">
+    <div class="foto-botones" data-prefix="pisReg"></div>
     <div id="pisRegFotosPreview" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;"></div>
     <button class="principal" onclick="guardarRegistroPecuario('acuicultura')">Guardar registro</button>
   </div>
@@ -230,7 +244,11 @@ small.ayuda{color:#7C8A76;font-size:.7rem;display:block;margin-top:3px;}
     <strong>Nuevo galpón</strong>
     <label>Nombre</label><input id="galNombre" placeholder="Ej: Galpón Ponedoras 1">
     <label>Tipo</label><select id="galTipo"><option>Gallinas ponedoras</option><option>Gallinas criollas</option></select>
-    <label>N.° de aves</label><input id="galAves" placeholder="Ej: 40">
+    <label>N.º de aves iniciales</label><input id="galAves" type="number" placeholder="Ej: 40">
+    <div class="fila2">
+      <div><label>Fecha de nacimiento / ingreso</label><input type="date" id="galFechaIngreso"></div>
+      <div><label>Raza / línea</label><input id="galRaza" placeholder="Ej: Lohmann, criolla"></div>
+    </div>
     <div class="subgrupo">Vértices del polígono (opcional)</div>
     <div class="fila3">
       <input id="galPtLat" placeholder="Latitud">
@@ -241,7 +259,7 @@ small.ayuda{color:#7C8A76;font-size:.7rem;display:block;margin-top:3px;}
     <div id="galPuntosLista" style="margin-top:6px;font-size:.78rem;"></div>
     <div id="galGeoCalc" class="geo-calc"></div>
     <div class="subgrupo">Fotos (opcional)</div>
-    <input type="file" id="galFotosInput" accept="image/*" multiple onchange="manejarFotos('gal', this)">
+    <div class="foto-botones" data-prefix="gal"></div>
     <div id="galFotosPreview" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;"></div>
     <button class="principal" onclick="guardarLote('galpon')">Guardar galpón</button>
   </div>
@@ -250,12 +268,17 @@ small.ayuda{color:#7C8A76;font-size:.7rem;display:block;margin-top:3px;}
     <strong>Registrar manejo</strong>
     <label>Galpón</label><select id="galRegLote"></select>
     <label>Actividad</label>
-    <select id="galActividad"><option>Recolección de huevos</option><option>Alimentación</option><option>Sanidad / vacunación</option><option>Limpieza galpón</option><option>Venta de aves</option></select>
+    <select id="galActividad" onchange="pistaPecuaria('gal')"><option>Recolección de huevos</option><option>Alimentación</option><option>Sanidad / vacunación</option><option>Limpieza galpón</option><option>Venta de aves</option><option>Ingreso de aves</option><option>Mortalidad</option><option>Ajuste de inventario</option></select>
     <label>Fecha</label><input type="date" id="galFecha">
-    <label>Cantidad / detalle</label><input id="galDetalle" placeholder="Ej: 32 huevos, 10kg balanceado">
+    <div class="fila2">
+      <div><label>Cantidad (n.º)</label><input type="number" id="galActCantidad" placeholder="Ej: 32"></div>
+      <div><label>Peso (libras)</label><input type="number" step="0.1" id="galActLibras" placeholder="Ej: 10"></div>
+    </div>
+    <small class="ayuda" id="galPista"></small>
+    <label>Detalle (opcional)</label><input id="galDetalle" placeholder="Ej: balanceado ponedoras">
     <label>Notas</label><textarea id="galNotas"></textarea>
     <div class="subgrupo">Fotos (opcional)</div>
-    <input type="file" accept="image/*" multiple onchange="manejarFotos('galReg', this)">
+    <div class="foto-botones" data-prefix="galReg"></div>
     <div id="galRegFotosPreview" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;"></div>
     <button class="principal" onclick="guardarRegistroPecuario('avicultura')">Guardar registro</button>
   </div>
@@ -351,10 +374,27 @@ small.ayuda{color:#7C8A76;font-size:.7rem;display:block;margin-top:3px;}
 
 <div id="detalleLote" style="display:none;position:fixed;inset:0;background:var(--sage);z-index:50;overflow-y:auto;">
   <div style="max-width:760px;margin:0 auto;padding:12px 12px 90px;">
-    <button class="sec" style="margin-bottom:10px;" onclick="cerrarDetalle()">← Volver a Cultivos</button>
+    <button class="sec" style="margin-bottom:10px;" onclick="cerrarDetalle()">← Volver</button>
     <div id="detalleContenido"></div>
   </div>
 </div>
+
+<div id="fotoRapida" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:120;align-items:center;justify-content:center;padding:14px;">
+  <div class="card" style="max-width:420px;width:100%;margin:0;max-height:92vh;overflow-y:auto;">
+    <strong>📷 Foto rápida</strong>
+    <small class="ayuda">Elige el lote (y la actividad si quieres) y toma la foto: queda guardada ahí.</small>
+    <label>Lote / piscina / galpón</label><select id="frLote" onchange="llenarActividadesFR()"></select>
+    <label>Asociar a una actividad</label><select id="frActividad"></select>
+    <label style="display:flex;gap:8px;align-items:center;margin-top:10px;"><input type="checkbox" id="frRotulo" checked style="width:auto;"> Escribir nombre del lote y fecha sobre la foto</label>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+      <label class="btn-foto">📷 Tomar foto<input type="file" accept="image/*" capture="environment" style="display:none" onchange="procesarFotoRapida(this)"></label>
+      <label class="btn-foto">🖼 Galería<input type="file" accept="image/*" multiple style="display:none" onchange="procesarFotoRapida(this)"></label>
+    </div>
+    <p id="estadoFR" style="font-size:.8rem;color:var(--tierra);min-height:18px;"></p>
+    <button class="sec" style="width:100%;" onclick="cerrarFotoRapida()">Cerrar</button>
+  </div>
+</div>
+<div id="toast"></div>
 
 <div id="visorFoto" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:200;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:12px;">
   <img id="visorImg" alt="Foto" style="max-width:100%;max-height:80vh;border-radius:8px;">
@@ -576,30 +616,93 @@ function edadTexto(fechaStr){
   if(d || !partes.length) partes.push(d+(d===1?' día':' días'));
   return partes.join(', ')+' ('+dias.toLocaleString('es-EC')+' días)';
 }
+function semanasDesde(fechaStr){
+  if(!fechaStr) return null;
+  const f = new Date(fechaStr+'T00:00:00'); const h = new Date(); h.setHours(0,0,0,0);
+  if(isNaN(f) || f>h) return null;
+  return Math.floor((h-f)/(7*86400000));
+}
 function esc(t){ return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 // ---------- Fotos ----------
-function comprimirFoto(file){
+function leerSinProcesar(file){
   return new Promise((resolve,reject)=>{
+    if(file.size > 600*1024){ reject(new Error('formato no compatible o foto muy pesada')); return; }
     const lector = new FileReader();
-    lector.onerror = reject;
-    lector.onload = e=>{
-      const img = new Image();
-      img.onerror = reject;
-      img.onload = ()=>{
-        const canvas = document.createElement('canvas');
-        const escala = Math.min(1, 640/img.width);
-        canvas.width = Math.round(img.width*escala); canvas.height = Math.round(img.height*escala);
-        canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
-        resolve(canvas.toDataURL('image/jpeg', 0.65));
-      };
-      img.src = e.target.result;
-    };
+    lector.onerror = ()=>reject(new Error('no se pudo leer el archivo'));
+    lector.onload = e=>resolve(e.target.result);
     lector.readAsDataURL(file);
   });
 }
+async function comprimirFoto(file, rotulo){
+  let fuente = null, url = null, ancho = 0, alto = 0;
+  try{ if(typeof createImageBitmap === 'function'){ fuente = await createImageBitmap(file); ancho = fuente.width; alto = fuente.height; } }catch(e){ fuente = null; }
+  if(!fuente){
+    try{
+      url = URL.createObjectURL(file);
+      fuente = await new Promise((res,rej)=>{ const im = new Image(); im.onload = ()=>res(im); im.onerror = ()=>rej(new Error('formato de imagen no compatible')); im.src = url; });
+      ancho = fuente.naturalWidth || fuente.width; alto = fuente.naturalHeight || fuente.height;
+    }catch(e){ if(url) URL.revokeObjectURL(url); return leerSinProcesar(file); }
+  }
+  try{
+    if(!ancho || !alto) throw new Error('imagen vacía');
+    const escala = Math.min(1, 800/Math.max(ancho,alto));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(ancho*escala); canvas.height = Math.round(alto*escala);
+    const ctx = canvas.getContext('2d');
+    if(!ctx) throw new Error('sin lienzo');
+    ctx.drawImage(fuente, 0, 0, canvas.width, canvas.height);
+    if(rotulo){
+      const pad = Math.max(6, Math.round(canvas.width/70));
+      let fs = Math.max(12, Math.round(canvas.width/32));
+      ctx.font = 'bold '+fs+'px sans-serif';
+      const w = ctx.measureText(rotulo).width;
+      if(w > canvas.width-2*pad){ fs = Math.max(8, Math.floor(fs*(canvas.width-2*pad)/w)); ctx.font = 'bold '+fs+'px sans-serif'; }
+      const alt = fs+pad*2;
+      ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(0, canvas.height-alt, canvas.width, alt);
+      ctx.fillStyle = '#fff'; ctx.textBaseline = 'middle'; ctx.fillText(rotulo, pad, canvas.height-alt/2);
+    }
+    return canvas.toDataURL('image/jpeg', 0.72);
+  }catch(e){
+    return leerSinProcesar(file);
+  }finally{
+    if(url) URL.revokeObjectURL(url);
+    if(fuente && fuente.close) fuente.close();
+  }
+}
+let fotosPendientes = 0;
+let toastT = null;
+function aviso(msg, ms){
+  const t = document.getElementById('toast'); if(!t) return;
+  t.textContent = msg; t.style.display = 'block';
+  clearTimeout(toastT); toastT = setTimeout(()=>{ t.style.display='none'; }, ms||3500);
+}
+function esperarFotos(){
+  if(fotosPendientes>0){ aviso('Espera: todavía se están procesando las fotos...'); return true; }
+  return false;
+}
+function rotuloTexto(nombre){
+  const f = new Date().toLocaleString('es-EC',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  return (nombre ? nombre+' · ' : '')+f;
+}
+function nombrePara(prefix){
+  const idSel = {reg:'regLote', pisReg:'pisRegLote', galReg:'galRegLote'}[prefix];
+  if(idSel){ const sl = document.getElementById(idSel); return (sl && sl.value) ? nombreLote(sl.value) : ''; }
+  const idN = {lote:'loteNombre', pis:'pisNombre', gal:'galNombre'}[prefix];
+  return idN ? document.getElementById(idN).value.trim() : '';
+}
+function botonesFoto(prefix){
+  return '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">'+
+    '<label class="btn-foto">📷 Tomar foto<input type="file" accept="image/*" capture="environment" style="display:none" onchange="manejarFotos(\''+prefix+'\', this, true)"></label>'+
+    '<label class="btn-foto">🖼 Galería<input type="file" accept="image/*" multiple style="display:none" onchange="manejarFotos(\''+prefix+'\', this, false)"></label></div>';
+}
+function renderBotonesFoto(){ document.querySelectorAll('.foto-botones').forEach(d=>{ d.innerHTML = botonesFoto(d.dataset.prefix); }); }
+function botonesFotoItem(col, id){
+  return '<button class="mini-edit" title="Tomar foto" onclick="agregarFotosA(\''+col+'\',\''+id+'\',true)">📷</button>'+
+         '<button class="mini-edit" title="Agregar desde la galería" onclick="agregarFotosA(\''+col+'\',\''+id+'\',false)">🖼</button>';
+}
 function galeria(col, id, fotos, tam){
-  tam = tam || 44;
+  tam = tam || 56;
   if(!fotos || !fotos.length) return '';
   return '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;">'+fotos.map((f,i)=>
     '<img src="'+f+'" onclick="verFoto(\''+col+'\',\''+id+'\','+i+')" style="width:'+tam+'px;height:'+tam+'px;object-fit:cover;border-radius:5px;border:1px solid var(--linea);cursor:pointer;">').join('')+'</div>';
@@ -623,14 +726,72 @@ function borrarFotoVisor(){
   if(!datos.eliminados.includes(fid)) datos.eliminados.push(fid);
   cerrarVisor(); guardar(); refrescarVistas();
 }
-function agregarFotosA(col, id){
-  const inp = document.createElement('input'); inp.type='file'; inp.accept='image/*'; inp.multiple=true;
+async function agregarArchivos(it, archivos, rotulo){
+  fotosPendientes++; let n = 0;
+  try{
+    aviso('Procesando foto(s)...', 60000);
+    for(const f of archivos){
+      try{ (it.fotos = it.fotos||[]).push(await comprimirFoto(f, rotulo)); n++; }
+      catch(e){ aviso('No se pudo usar la foto "'+(f.name||'')+'": '+(e.message||e), 7000); }
+    }
+  } finally { fotosPendientes--; }
+  return n;
+}
+function agregarFotosA(col, id, camara){
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
+  if(camara) inp.setAttribute('capture','environment'); else inp.multiple = true;
   inp.onchange = async ()=>{
-    const it = (datos[col]||[]).find(x=>x.id===id); if(!it) return;
-    for(const f of Array.from(inp.files)){ try{ (it.fotos = it.fotos||[]).push(await comprimirFoto(f)); }catch(e){} }
-    guardar(); refrescarVistas();
+    const archivos = Array.from(inp.files||[]);
+    const it = (datos[col]||[]).find(x=>x.id===id); if(!it || !archivos.length) return;
+    const lote = col==='lotes' ? it : datos.lotes.find(x=>x.id===it.loteId);
+    const n = await agregarArchivos(it, archivos, (camara && lote) ? rotuloTexto(lote.nombre) : '');
+    if(n){ guardar(); refrescarVistas(); aviso('✔ '+n+' foto(s) agregada(s)'); }
   };
   inp.click();
+}
+
+// ---------- Foto rápida (botón flotante) ----------
+function abrirFotoRapida(){
+  const ico = {cultivo:'🌱', piscina:'🐟', galpon:'🐔'};
+  document.getElementById('frLote').innerHTML = datos.lotes.map(l=>'<option value="'+l.id+'">'+(ico[l.tipo]||'')+' '+esc(l.nombre)+'</option>').join('') || '<option value="">Registra un lote primero</option>';
+  llenarActividadesFR();
+  document.getElementById('estadoFR').textContent = '';
+  document.getElementById('fotoRapida').style.display = 'flex';
+}
+function cerrarFotoRapida(){ document.getElementById('fotoRapida').style.display = 'none'; }
+function llenarActividadesFR(){
+  const id = document.getElementById('frLote').value;
+  const l = datos.lotes.find(x=>x.id===id);
+  let opts = '<option value="">Solo al lote (sin actividad)</option>';
+  if(l){
+    const regs = l.tipo==='cultivo'
+      ? datos.registros.filter(r=>r.loteId===id).map(r=>({col:'registros', id:r.id, fecha:r.fecha, t:nombreActividad(r.actividadId)}))
+      : datos.registrosPecuarios.filter(r=>r.loteId===id).map(r=>({col:'registrosPecuarios', id:r.id, fecha:r.fecha, t:r.actividad}));
+    regs.sort((a,b)=>a.fecha<b.fecha?1:-1).slice(0,15).forEach(r=>{ opts += '<option value="'+r.col+':'+r.id+'">'+r.fecha+' · '+esc(r.t)+'</option>'; });
+  }
+  document.getElementById('frActividad').innerHTML = opts;
+}
+async function procesarFotoRapida(input){
+  const archivos = Array.from(input.files||[]);
+  const estado = document.getElementById('estadoFR');
+  const l = datos.lotes.find(x=>x.id===document.getElementById('frLote').value);
+  if(!l){ estado.textContent = 'Primero elige un lote.'; input.value=''; return; }
+  if(!archivos.length) return;
+  let col = 'lotes', itemId = l.id;
+  const dest = document.getElementById('frActividad').value;
+  if(dest){ const partes = dest.split(':'); col = partes[0]; itemId = partes[1]; }
+  const it = (datos[col]||[]).find(x=>x.id===itemId);
+  if(!it){ estado.textContent = 'No se encontró la actividad.'; input.value=''; return; }
+  const rot = document.getElementById('frRotulo').checked ? rotuloTexto(l.nombre) : '';
+  estado.textContent = 'Procesando...';
+  const n = await agregarArchivos(it, archivos, rot);
+  input.value = '';
+  if(n){
+    guardar(); refrescarVistas();
+    estado.textContent = '✔ '+n+' foto(s) guardada(s) en '+l.nombre+(dest ? ' (actividad)' : '')+'. Puedes tomar otra.';
+  }else{
+    estado.textContent = 'No se pudo guardar la foto.';
+  }
 }
 
 function agregarPunto(prefix){
@@ -660,11 +821,20 @@ function renderPuntosTemp(prefix){
   const areaId = {lote:'loteArea', pis:'pisArea'}[prefix];
   if(areaId && geo){ document.getElementById(areaId).value = textoArea(geo.areaM2); }
 }
-async function manejarFotos(prefix, input){
-  const archivos = Array.from(input.files); input.value='';
-  for(const f of archivos){
-    try{ fotosTemp[prefix].push(await comprimirFoto(f)); renderFotosTemp(prefix); }catch(e){}
-  }
+async function manejarFotos(prefix, input, camara){
+  const archivos = Array.from(input.files||[]);
+  if(!archivos.length) return;
+  const rot = camara ? rotuloTexto(nombrePara(prefix)) : '';
+  fotosPendientes++;
+  try{
+    aviso('Procesando foto(s)...', 60000);
+    let n = 0;
+    for(const f of archivos){
+      try{ fotosTemp[prefix].push(await comprimirFoto(f, rot)); n++; renderFotosTemp(prefix); }
+      catch(e){ aviso('No se pudo usar la foto "'+(f.name||'')+'": '+(e.message||e), 7000); }
+    }
+    if(n) aviso('✔ '+n+' foto(s) lista(s). Se guardan al presionar Guardar.', 4000);
+  } finally { fotosPendientes--; input.value=''; }
 }
 function renderFotosTemp(prefix){
   const cont = document.getElementById(prefix+'FotosPreview'); if(!cont) return;
@@ -683,16 +853,17 @@ function guardarLote(tipo){
       variedad:document.getElementById('loteVariedad').value.trim(), fechaSiembra:document.getElementById('loteFechaSiembra').value,
       numPlantas:num('loteNumPlantas'), distPlantas:num('loteDistPlantas'), distHileras:num('loteDistHileras')};
   }
-  if(tipo==='piscina'){ nombre=document.getElementById('pisNombre').value.trim(); extra={especie:document.getElementById('pisEspecie').value.trim(), area:document.getElementById('pisArea').value.trim()}; }
-  if(tipo==='galpon'){ nombre=document.getElementById('galNombre').value.trim(); extra={tipoAve:document.getElementById('galTipo').value, aves:document.getElementById('galAves').value.trim()}; }
+  if(tipo==='piscina'){ nombre=document.getElementById('pisNombre').value.trim(); extra={especie:document.getElementById('pisEspecie').value.trim(), area:document.getElementById('pisArea').value.trim(), fechaInicio:document.getElementById('pisFechaSiembra').value, cantidadInicial:num('pisCantidad')}; }
+  if(tipo==='galpon'){ nombre=document.getElementById('galNombre').value.trim(); extra={tipoAve:document.getElementById('galTipo').value, aves:document.getElementById('galAves').value.trim(), cantidadInicial:num('galAves'), fechaInicio:document.getElementById('galFechaIngreso').value, raza:document.getElementById('galRaza').value.trim()}; }
+  if(esperarFotos()) return;
   if(!nombre){ alert('Escribe un nombre.'); return; }
   const geo = calcularGeo(puntosTemp[prefix]);
   datos.lotes.push({id:nid(), tipo, nombre, ...extra, areaM2: geo ? geo.areaM2 : null, puntos: puntosTemp[prefix].slice(), fotos: fotosTemp[prefix].slice()});
   guardar();
   puntosTemp[prefix]=[]; fotosTemp[prefix]=[]; renderPuntosTemp(prefix); renderFotosTemp(prefix);
   if(tipo==='cultivo'){ ['loteNombre','loteArea','loteVariedad','loteFechaSiembra','loteNumPlantas','loteDistPlantas','loteDistHileras'].forEach(i=>document.getElementById(i).value=''); renderLotes(); }
-  if(tipo==='piscina'){ document.getElementById('pisNombre').value=''; document.getElementById('pisEspecie').value=''; document.getElementById('pisArea').value=''; renderPiscinas(); }
-  if(tipo==='galpon'){ document.getElementById('galNombre').value=''; document.getElementById('galAves').value=''; renderGalpones(); }
+  if(tipo==='piscina'){ ['pisNombre','pisEspecie','pisArea','pisFechaSiembra','pisCantidad'].forEach(i=>document.getElementById(i).value=''); renderPiscinas(); }
+  if(tipo==='galpon'){ ['galNombre','galAves','galFechaIngreso','galRaza'].forEach(i=>document.getElementById(i).value=''); renderGalpones(); }
   renderSelects();
 }
 function borrarLote(id){
@@ -727,15 +898,28 @@ function renderLotes(){
 }
 function renderPiscinas(){
   const l = datos.lotes.filter(x=>x.tipo==='piscina');
-  document.getElementById('listaPiscinas').innerHTML = l.map(p=>`
-    <div class="item"><div class="item-txt"><div class="item-top">${p.nombre}</div><div class="item-sub">${p.especie||''} · ${p.area||''}</div>${infoGeoFotos(p)}</div>
-    <div class="item-acc"><button class="mini-del" onclick="borrarLote('${p.id}')">🗑</button></div></div>`).join('') || '<p class="vacio">Sin piscinas.</p>';
+  document.getElementById('listaPiscinas').innerHTML = l.map(p=>{
+    const st = calcularStock(p), edad = edadTexto(p.fechaInicio);
+    const geo = calcularGeo(p.puntos);
+    const partes = [esc(p.especie||'')];
+    if(edad) partes.push('Edad: '+edad.split(' (')[0]);
+    partes.push('Actual: '+st.actual.toLocaleString('es-EC')+' peces');
+    if(geo) partes.push(textoArea(geo.areaM2)); else if(p.area) partes.push(esc(p.area));
+    return `<div class="item"><div class="item-txt"><div class="item-top" style="cursor:pointer;color:var(--agua);" onclick="abrirLote('${p.id}')">${esc(p.nombre)} ›</div><div class="item-sub">${partes.filter(Boolean).join(' · ')}</div>${infoGeoFotos(p,false)}</div>
+    <div class="item-acc"><button class="sec" onclick="abrirLote('${p.id}')">Abrir</button><button class="mini-del" onclick="borrarLote('${p.id}')">🗑</button></div></div>`;
+  }).join('') || '<p class="vacio">Sin piscinas.</p>';
 }
 function renderGalpones(){
   const l = datos.lotes.filter(x=>x.tipo==='galpon');
-  document.getElementById('listaGalpones').innerHTML = l.map(g=>`
-    <div class="item"><div class="item-txt"><div class="item-top">${g.nombre}</div><div class="item-sub">${g.tipoAve||''} · ${g.aves||0} aves</div>${infoGeoFotos(g)}</div>
-    <div class="item-acc"><button class="mini-del" onclick="borrarLote('${g.id}')">🗑</button></div></div>`).join('') || '<p class="vacio">Sin galpones.</p>';
+  document.getElementById('listaGalpones').innerHTML = l.map(g=>{
+    const st = calcularStock(g), sem = semanasDesde(g.fechaInicio);
+    const partes = [esc(g.tipoAve||'')];
+    if(g.raza) partes.push(esc(g.raza));
+    if(sem!==null) partes.push('Edad: '+sem+' semanas');
+    partes.push('Actuales: '+st.actual.toLocaleString('es-EC')+' aves');
+    return `<div class="item"><div class="item-txt"><div class="item-top" style="cursor:pointer;color:var(--agua);" onclick="abrirLote('${g.id}')">${esc(g.nombre)} ›</div><div class="item-sub">${partes.filter(Boolean).join(' · ')}</div>${infoGeoFotos(g,false)}</div>
+    <div class="item-acc"><button class="sec" onclick="abrirLote('${g.id}')">Abrir</button><button class="mini-del" onclick="borrarLote('${g.id}')">🗑</button></div></div>`;
+  }).join('') || '<p class="vacio">Sin galpones.</p>';
 }
 
 // ---------------- Registro de actividades de cultivo ----------------
@@ -746,6 +930,7 @@ function autocompletarCostoInsumo(){
   if(ins && ins.costoUnitario){ document.getElementById('regCostoInsumo').value = (ins.costoUnitario*cantidad).toFixed(2); }
 }
 function guardarRegistroActividad(){
+  if(esperarFotos()) return;
   const loteId = document.getElementById('regLote').value;
   if(!loteId){ alert('Registra un lote primero.'); return; }
   const insumoId = document.getElementById('regInsumo').value;
@@ -784,37 +969,88 @@ function renderRegistros(){
     <div class="item"><div class="item-txt"><div class="item-top">${nombreActividad(r.actividadId)}</div>
     <div class="item-sub">${esc(nombreLote(r.loteId))} · ${textoRegistro(r)}</div>
     ${r.notas? `<div class="item-sub">${esc(r.notas)}</div>`:''}${galeria('registros', r.id, r.fotos)}</div>
-    <div class="item-acc"><button class="mini-edit" title="Agregar fotos" onclick="agregarFotosA('registros','${r.id}')">📷+</button><button class="mini-del" onclick="borrarRegistro('${r.id}')">🗑</button></div></div>`).join('') || '<p class="vacio">Sin actividades registradas.</p>';
+    <div class="item-acc">${botonesFotoItem('registros', r.id)}<button class="mini-del" onclick="borrarRegistro('${r.id}')">🗑</button></div></div>`).join('') || '<p class="vacio">Sin actividades registradas.</p>';
 }
 
 // ---------------- Registro pecuario (acuicultura/avicultura) ----------------
 function guardarRegistroPecuario(modulo){
+  if(esperarFotos()) return;
   const pre = modulo==='acuicultura' ? 'pis' : 'gal';
   const loteId = document.getElementById(pre+'RegLote').value;
   if(!loteId){ alert('Registra primero una piscina/galpón.'); return; }
+  const num = id=>{ const x = numero(document.getElementById(id).value); return isFinite(x) ? x : null; };
   datos.registrosPecuarios.push({
     id:nid(), modulo, loteId,
     actividad: document.getElementById(pre+'Actividad').value,
     fecha: document.getElementById(pre+'Fecha').value || new Date().toISOString().slice(0,10),
+    cantidad: num(pre+'ActCantidad'), libras: num(pre+'ActLibras'),
     detalle: document.getElementById(pre+'Detalle').value.trim(),
     notas: document.getElementById(pre+'Notas').value.trim(),
     fotos: fotosTemp[pre+'Reg'].slice()
   });
   guardar();
   fotosTemp[pre+'Reg'] = []; renderFotosTemp(pre+'Reg');
-  document.getElementById(pre+'Detalle').value=''; document.getElementById(pre+'Notas').value='';
-  renderRegPecuarios();
+  [pre+'ActCantidad', pre+'ActLibras', pre+'Detalle', pre+'Notas'].forEach(i=>document.getElementById(i).value='');
+  renderRegPecuarios(); renderPiscinas(); renderGalpones(); refrescarDetalle();
 }
-function borrarRegPecuario(id){ if(!confirm('¿Eliminar?'))return; datos.registrosPecuarios=datos.registrosPecuarios.filter(r=>r.id!==id); guardar(); renderRegPecuarios(); }
+function borrarRegPecuario(id){ if(!confirm('¿Eliminar?'))return; datos.registrosPecuarios=datos.registrosPecuarios.filter(r=>r.id!==id); guardar(); renderRegPecuarios(); renderPiscinas(); renderGalpones(); refrescarDetalle(); }
+function textoPecuario(r){
+  const f = v=>Number(v).toLocaleString('es-EC',{maximumFractionDigits:1});
+  return [r.fecha, (r.cantidad!=null && r.cantidad!=='') ? 'Cantidad: '+f(r.cantidad) : '', (r.libras!=null && r.libras!=='') ? 'Peso: '+f(r.libras)+' lb' : '', r.detalle||''].filter(Boolean).map(esc).join(' · ');
+}
 function itemPecuario(r){
-  return `<div class="item"><div class="item-txt"><div class="item-top">${esc(r.actividad)}</div><div class="item-sub">${esc(nombreLote(r.loteId))} · ${r.fecha} · ${esc(r.detalle||'')}</div>${r.notas? `<div class="item-sub">${esc(r.notas)}</div>`:''}${galeria('registrosPecuarios', r.id, r.fotos)}</div>
-    <div class="item-acc"><button class="mini-edit" title="Agregar fotos" onclick="agregarFotosA('registrosPecuarios','${r.id}')">📷+</button><button class="mini-del" onclick="borrarRegPecuario('${r.id}')">🗑</button></div></div>`;
+  return `<div class="item"><div class="item-txt"><div class="item-top">${esc(r.actividad)}</div><div class="item-sub">${esc(nombreLote(r.loteId))} · ${textoPecuario(r)}</div>${r.notas? `<div class="item-sub">${esc(r.notas)}</div>`:''}${galeria('registrosPecuarios', r.id, r.fotos)}</div>
+    <div class="item-acc">${botonesFotoItem('registrosPecuarios', r.id)}<button class="mini-del" onclick="borrarRegPecuario('${r.id}')">🗑</button></div></div>`;
 }
 function renderRegPecuarios(){
   const pis = datos.registrosPecuarios.filter(r=>r.modulo==='acuicultura');
   const gal = datos.registrosPecuarios.filter(r=>r.modulo==='avicultura');
   document.getElementById('listaRegPis').innerHTML = pis.slice().reverse().map(itemPecuario).join('') || '<p class="vacio">Sin registros.</p>';
   document.getElementById('listaRegGal').innerHTML = gal.slice().reverse().map(itemPecuario).join('') || '<p class="vacio">Sin registros.</p>';
+}
+
+// ---------------- Inventario y producción de piscinas / galpones ----------------
+function calcularStock(l){
+  const regs = datos.registrosPecuarios.filter(r=>r.loteId===l.id);
+  let ini = numero(l.cantidadInicial); if(!isFinite(ini)) ini = numero(l.aves); if(!isFinite(ini)) ini = 0;
+  const st = {inicial:ini, entradas:0, muertes:0, salidas:0, ajustes:0, prodNum:0, prodLb:0, huevos:0, huevos7:0, alimentoLb:0, muestreo:null};
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  regs.forEach(r=>{
+    const q = Number(r.cantidad)||0, lb = Number(r.libras)||0, a = r.actividad||'';
+    if(/^(Siembra|Ingreso)/.test(a)) st.entradas += q;
+    else if(a==='Mortalidad') st.muertes += q;
+    else if(a==='Cosecha' || a==='Venta de aves'){ st.salidas += q; st.prodNum += q; st.prodLb += lb; }
+    else if(/^Ajuste/.test(a)) st.ajustes += q;
+    else if(a==='Recolección de huevos'){
+      st.huevos += q;
+      const f = new Date(r.fecha+'T00:00:00');
+      if(!isNaN(f)){ const dias = (hoy.getTime()-f.getTime())/86400000; if(dias>=0 && dias<7) st.huevos7 += q; }
+    }
+    else if(a==='Alimentación') st.alimentoLb += lb;
+    else if(a==='Muestreo' && q>0 && lb>0){ if(!st.muestreo || r.fecha>=st.muestreo.fecha) st.muestreo = {fecha:r.fecha, prom:lb/q}; }
+  });
+  st.actual = st.inicial + st.entradas - st.muertes - st.salidas + st.ajustes;
+  const base = st.inicial + st.entradas;
+  st.mortPct = base>0 ? st.muertes/base*100 : null;
+  st.biomasaLb = (st.muestreo && st.actual>0) ? st.actual*st.muestreo.prom : null;
+  st.fcr = (l.tipo==='piscina' && st.alimentoLb>0 && st.prodLb>0) ? st.alimentoLb/st.prodLb : null;
+  st.postura = (l.tipo==='galpon' && st.actual>0 && st.huevos7>0) ? st.huevos7/(7*st.actual)*100 : null;
+  return st;
+}
+const PISTAS = {
+  'Siembra de alevines':'Cantidad = alevines sembrados (se suman al inventario).',
+  'Ingreso de aves':'Cantidad = aves que ingresan (se suman al inventario).',
+  'Mortalidad':'Cantidad = animales muertos (se restan del inventario).',
+  'Cosecha':'Cantidad = peces cosechados y peso total en libras (se restan y suman a la producción).',
+  'Venta de aves':'Cantidad = aves vendidas y peso total en libras (se restan y suman a la producción).',
+  'Recolección de huevos':'Cantidad = número de huevos recolectados.',
+  'Alimentación':'Peso = libras de alimento suministradas.',
+  'Muestreo':'Cantidad = peces pesados en la muestra y Peso = peso total de la muestra en libras.',
+  'Ajuste de inventario':'Cantidad con signo: positiva suma, negativa resta (ej. -20).'
+};
+function pistaPecuaria(pre){
+  const a = document.getElementById(pre+'Actividad').value;
+  document.getElementById(pre+'Pista').textContent = PISTAS[a] || '';
 }
 
 // ---------------- Ficha del lote (al abrir un cultivo) ----------------
@@ -832,12 +1068,99 @@ function eliminarLoteAbierto(){
   const id = loteAbierto; borrarLote(id);
   if(!datos.lotes.some(x=>x.id===id)) cerrarDetalle();
 }
+function irATab(t){ const b = document.querySelector('nav button[data-tab="'+t+'"]'); if(b) b.click(); }
 function registrarActividadEn(id){
+  const l = datos.lotes.find(x=>x.id===id); if(!l) return;
   cerrarDetalle();
-  const sel = document.getElementById('regLote'); sel.value = id;
+  const m = {cultivo:['cultivos','regLote'], piscina:['acuicultura','pisRegLote'], galpon:['avicultura','galRegLote']}[l.tipo];
+  irATab(m[0]);
+  const sel = document.getElementById(m[1]); sel.value = id;
   sel.scrollIntoView({behavior:'smooth', block:'center'});
 }
 function renderDetalleLote(){
+  const l = datos.lotes.find(x=>x.id===loteAbierto);
+  if(!l){ cerrarDetalle(); return; }
+  if(l.tipo==='cultivo') renderDetalleCultivo(); else renderDetallePecuario(l);
+}
+function renderDetallePecuario(l){
+  const cont = document.getElementById('detalleContenido');
+  const esPez = l.tipo==='piscina';
+  const st = calcularStock(l);
+  const geo = calcularGeo(l.puntos);
+  const areaM2 = geo ? geo.areaM2 : (l.areaM2||null);
+  const f = v=>Number(v).toLocaleString('es-EC',{maximumFractionDigits:1});
+  const sem = semanasDesde(l.fechaInicio);
+  let edad = edadTexto(l.fechaInicio);
+  if(edad && !esPez && sem!==null) edad = sem+' semanas · '+edad;
+  const regs = datos.registrosPecuarios.filter(r=>r.loteId===l.id).slice().sort((a,b)=>a.fecha<b.fecha?1:-1);
+  const fin = costosDeLote(l.id);
+  const balance = fin.ingresos - fin.gastos;
+  const mapa = geo ? ' · <a href="https://www.google.com/maps?q='+geo.centro.lat+','+geo.centro.lng+'" target="_blank" style="color:var(--agua);">Ver en mapa ↗</a>' : '';
+  const unidad = esPez ? 'peces' : 'aves';
+  let filas = '';
+  if(esPez){
+    filas += filaInfo('Especie', esc(l.especie)||'—');
+    filas += filaInfo('Fecha de siembra', l.fechaInicio||'—');
+    filas += filaInfo('Edad', edad||'—');
+    filas += filaInfo('Cantidad inicial', st.inicial ? f(st.inicial) : '—');
+    filas += filaInfo('Siembras adicionales', f(st.entradas));
+    filas += filaInfo('Mortalidad', f(st.muertes)+(st.mortPct!==null ? ' ('+st.mortPct.toFixed(1)+'%)' : ''));
+    filas += filaInfo('Cosechados', f(st.prodNum)+' peces · '+f(st.prodLb)+' lb');
+    filas += filaInfo('<b>Cantidad actual</b>', '<b>'+f(st.actual)+' peces</b>');
+    filas += filaInfo('Producción total', f(st.prodLb)+' lb · '+f(st.prodNum)+' peces');
+    filas += filaInfo('Alimento suministrado', f(st.alimentoLb)+' lb');
+    filas += filaInfo('Conversión alimenticia', st.fcr!==null ? st.fcr.toFixed(2)+' lb alimento / lb producida' : '—');
+    filas += filaInfo('Último muestreo', st.muestreo ? 'Peso promedio '+f(st.muestreo.prom*453.6)+' g ('+st.muestreo.fecha+')' : '—');
+    filas += filaInfo('Biomasa estimada', st.biomasaLb!==null ? f(st.biomasaLb)+' lb' : '—');
+    filas += filaInfo('Área / volumen', areaM2 ? textoArea(areaM2) : (esc(l.area)||'—'));
+  }else{
+    filas += filaInfo('Tipo', esc(l.tipoAve)||'—');
+    filas += filaInfo('Raza / línea', esc(l.raza)||'—');
+    filas += filaInfo('Fecha de nacimiento / ingreso', l.fechaInicio||'—');
+    filas += filaInfo('Edad', edad||'—');
+    filas += filaInfo('Aves iniciales', st.inicial ? f(st.inicial) : '—');
+    filas += filaInfo('Ingresos adicionales', f(st.entradas));
+    filas += filaInfo('Mortalidad', f(st.muertes)+(st.mortPct!==null ? ' ('+st.mortPct.toFixed(1)+'%)' : ''));
+    filas += filaInfo('Aves vendidas', f(st.prodNum)+' · '+f(st.prodLb)+' lb');
+    filas += filaInfo('<b>Aves actuales</b>', '<b>'+f(st.actual)+' aves</b>');
+    filas += filaInfo('Huevos recolectados (total)', f(st.huevos));
+    filas += filaInfo('Huevos últimos 7 días', f(st.huevos7));
+    filas += filaInfo('Postura últimos 7 días', st.postura!==null ? st.postura.toFixed(1)+' %' : '—');
+    filas += filaInfo('Alimento suministrado', f(st.alimentoLb)+' lb');
+    if(areaM2) filas += filaInfo('Área', textoArea(areaM2));
+  }
+  filas += filaInfo('Puntos del polígono', (l.puntos && l.puntos.length) ? l.puntos.length+mapa : 'Sin puntos');
+  cont.innerHTML = `
+  <div class="card">
+    <div style="font-size:1.15rem;font-weight:700;color:var(--tierra);">${esPez?'🐟':'🐔'} ${esc(l.nombre)}</div>
+    <div class="item-sub">${esPez ? esc(l.especie||'Piscicultura') : esc(l.tipoAve||'Avicultura')}</div>
+    <div style="margin-top:8px;">${filas}</div>
+    <div class="footer-acc" style="margin-top:10px;">
+      <button class="sec" onclick="editarLote()">✎ Editar datos y polígono</button>
+      <button class="sec" style="border-color:var(--rust);color:var(--rust);" onclick="eliminarLoteAbierto()">🗑 Eliminar</button>
+    </div>
+    <div id="editorLote"></div>
+  </div>
+  <div class="card"><strong>Fotos</strong>
+    ${galeria('lotes', l.id, l.fotos, 72) || '<p class="vacio">Sin fotos todavía.</p>'}
+    <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;"><button class="sec" onclick="agregarFotosA('lotes','${l.id}',true)">📷 Tomar foto</button><button class="sec" onclick="agregarFotosA('lotes','${l.id}',false)">🖼 Galería</button></div>
+  </div>
+  <div class="card"><strong>Actividades realizadas (${regs.length})</strong>
+    <button class="sec" style="margin:8px 0;" onclick="registrarActividadEn('${l.id}')">＋ Registrar actividad</button>
+    ${regs.map(r=>`<div class="item"><div class="item-txt"><div class="item-top">${esc(r.actividad)}</div>
+      <div class="item-sub">${textoPecuario(r)}</div>${r.notas ? `<div class="item-sub">${esc(r.notas)}</div>` : ''}${galeria('registrosPecuarios', r.id, r.fotos, 60)}</div>
+      <div class="item-acc">${botonesFotoItem('registrosPecuarios', r.id)}</div></div>`).join('') || '<p class="vacio">Aún no hay actividades.</p>'}
+  </div>
+  <div class="card"><strong>Ingresos y gastos</strong>
+    <div style="margin-top:6px;">
+      ${filaInfo('Ingresos', fmt(fin.ingresos))}
+      ${filaInfo('Gastos', fmt(fin.gastos))}
+      ${filaInfo('Balance', '<span style="color:'+(balance>=0?'var(--tierra)':'var(--rust)')+'">'+fmt(balance)+'</span>')}
+    </div>
+    <small class="ayuda">Se toman de Finanzas los movimientos asociados a este lote.</small>
+  </div>`;
+}
+function renderDetalleCultivo(){
   const l = datos.lotes.find(x=>x.id===loteAbierto);
   const cont = document.getElementById('detalleContenido');
   if(!l){ cerrarDetalle(); return; }
@@ -876,13 +1199,13 @@ function renderDetalleLote(){
   </div>
   <div class="card"><strong>Fotos del lote</strong>
     ${galeria('lotes', l.id, l.fotos, 72) || '<p class="vacio">Sin fotos todavía.</p>'}
-    <button class="sec" style="margin-top:8px;" onclick="agregarFotosA('lotes','${l.id}')">📷 Agregar fotos</button>
+    <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;"><button class="sec" onclick="agregarFotosA('lotes','${l.id}',true)">📷 Tomar foto</button><button class="sec" onclick="agregarFotosA('lotes','${l.id}',false)">🖼 Galería</button></div>
   </div>
   <div class="card"><strong>Actividades de este lote (${regs.length})</strong>
     <button class="sec" style="margin:8px 0;" onclick="registrarActividadEn('${l.id}')">＋ Registrar actividad en este lote</button>
     ${regs.map(r=>`<div class="item"><div class="item-txt"><div class="item-top">${nombreActividad(r.actividadId)}</div>
       <div class="item-sub">${textoRegistro(r)}</div>${r.notas ? `<div class="item-sub">${esc(r.notas)}</div>` : ''}${galeria('registros', r.id, r.fotos, 60)}</div>
-      <div class="item-acc"><button class="mini-edit" title="Agregar fotos" onclick="agregarFotosA('registros','${r.id}')">📷+</button></div></div>`).join('') || '<p class="vacio">Aún no hay actividades en este lote.</p>'}
+      <div class="item-acc">${botonesFotoItem('registros', r.id)}</div></div>`).join('') || '<p class="vacio">Aún no hay actividades en este lote.</p>'}
   </div>
   <div class="card"><strong>Ingresos y gastos del lote</strong>
     <div style="margin-top:6px;">
@@ -896,9 +1219,9 @@ function renderDetalleLote(){
 function editarLote(){
   const l = datos.lotes.find(x=>x.id===loteAbierto); if(!l) return;
   editorActivo = true; edicionPuntos = (l.puntos||[]).map(p=>({...p}));
-  document.getElementById('editorLote').innerHTML = `
-    <div class="subgrupo">Editar lote</div>
-    <label>Nombre</label><input id="edNombre" value="${esc(l.nombre)}">
+  let especificos = '';
+  if(l.tipo==='cultivo'){
+    especificos = `
     <div class="fila2">
       <div><label>Variedad</label><input id="edVariedad" value="${esc(l.variedad)}"></div>
       <div><label>Fecha de siembra</label><input type="date" id="edFecha" value="${esc(l.fechaSiembra)}"></div>
@@ -908,7 +1231,28 @@ function editarLote(){
       <div><label>Entre plantas (m)</label><input type="number" step="0.1" id="edDistP" value="${l.distPlantas||''}"></div>
       <div><label>Entre hileras (m)</label><input type="number" step="0.1" id="edDistH" value="${l.distHileras||''}"></div>
     </div>
-    <label>Área (solo si no usas puntos del polígono)</label><input id="edArea" value="${esc(l.area)}">
+    <label>Área (solo si no usas puntos del polígono)</label><input id="edArea" value="${esc(l.area)}">`;
+  }else if(l.tipo==='piscina'){
+    especificos = `
+    <label>Especie</label><input id="edEspecie" value="${esc(l.especie)}">
+    <div class="fila2">
+      <div><label>Fecha de siembra</label><input type="date" id="edFecha" value="${esc(l.fechaInicio)}"></div>
+      <div><label>Cantidad inicial (peces)</label><input type="number" id="edCant" value="${l.cantidadInicial!=null ? l.cantidadInicial : ''}"></div>
+    </div>
+    <label>Área / volumen (solo si no usas puntos)</label><input id="edArea" value="${esc(l.area)}">`;
+  }else{
+    especificos = `
+    <label>Tipo</label><select id="edTipoAve"><option ${l.tipoAve==='Gallinas ponedoras'?'selected':''}>Gallinas ponedoras</option><option ${l.tipoAve==='Gallinas criollas'?'selected':''}>Gallinas criollas</option></select>
+    <label>Raza / línea</label><input id="edRaza" value="${esc(l.raza)}">
+    <div class="fila2">
+      <div><label>Fecha de nacimiento / ingreso</label><input type="date" id="edFecha" value="${esc(l.fechaInicio)}"></div>
+      <div><label>Aves iniciales</label><input type="number" id="edCant" value="${l.cantidadInicial!=null ? l.cantidadInicial : ''}"></div>
+    </div>`;
+  }
+  document.getElementById('editorLote').innerHTML = `
+    <div class="subgrupo">Editar</div>
+    <label>Nombre</label><input id="edNombre" value="${esc(l.nombre)}">
+    ${especificos}
     <div class="subgrupo">Puntos del polígono</div>
     <div class="fila3">
       <input id="edPtLat" placeholder="Latitud"><input id="edPtLng" placeholder="Longitud">
@@ -952,13 +1296,27 @@ function guardarEdicionLote(){
   if(!nombre){ alert('Escribe un nombre.'); return; }
   const num = id=>{ const x = numero(document.getElementById(id).value); return isFinite(x) ? x : null; };
   l.nombre = nombre;
-  l.variedad = document.getElementById('edVariedad').value.trim();
-  l.fechaSiembra = document.getElementById('edFecha').value;
-  l.numPlantas = num('edPlantas'); l.distPlantas = num('edDistP'); l.distHileras = num('edDistH');
   l.puntos = edicionPuntos.slice();
   const geo = calcularGeo(l.puntos);
   l.areaM2 = geo ? geo.areaM2 : null;
-  l.area = geo ? textoArea(geo.areaM2) : document.getElementById('edArea').value.trim();
+  if(l.tipo==='cultivo'){
+    l.variedad = document.getElementById('edVariedad').value.trim();
+    l.fechaSiembra = document.getElementById('edFecha').value;
+    l.numPlantas = num('edPlantas'); l.distPlantas = num('edDistP'); l.distHileras = num('edDistH');
+    l.area = geo ? textoArea(geo.areaM2) : document.getElementById('edArea').value.trim();
+  }else if(l.tipo==='piscina'){
+    l.especie = document.getElementById('edEspecie').value.trim();
+    l.fechaInicio = document.getElementById('edFecha').value;
+    l.cantidadInicial = num('edCant');
+    l.area = geo ? textoArea(geo.areaM2) : document.getElementById('edArea').value.trim();
+  }else{
+    l.tipoAve = document.getElementById('edTipoAve').value;
+    l.raza = document.getElementById('edRaza').value.trim();
+    l.fechaInicio = document.getElementById('edFecha').value;
+    l.cantidadInicial = num('edCant');
+    l.aves = l.cantidadInicial!=null ? String(l.cantidadInicial) : '';
+    if(geo) l.area = textoArea(geo.areaM2);
+  }
   editorActivo = false;
   guardar(); renderTodo(); renderDetalleLote();
 }
@@ -1236,7 +1594,13 @@ function botonSync(ocupado){
   b.disabled = ocupado; b.textContent = ocupado ? '⟳ Sincronizando...' : '⟳ Sincronizar ahora';
 }
 
-async function sincronizarFotos(){
+let fotosSincPromesa = null;
+function sincronizarFotos(){
+  if(fotosSincPromesa) return fotosSincPromesa;
+  fotosSincPromesa = sincronizarFotosInterno().finally(()=>{ fotosSincPromesa = null; });
+  return fotosSincPromesa;
+}
+async function sincronizarFotosInterno(){
   if(!db) return;
   const subidas = new Set(JSON.parse(localStorage.getItem('finca_fotos_subidas')||'[]'));
   const elim = new Set(datos.eliminados||[]);
@@ -1392,6 +1756,8 @@ auth.onAuthStateChanged(user=>{
     document.getElementById('authError').textContent = 'Sin internet: la primera vez en este dispositivo debes iniciar sesión con conexión.';
   }
 }
+
+renderBotonesFoto(); pistaPecuaria('pis'); pistaPecuaria('gal');
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(()=>{}); });
