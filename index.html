@@ -60,6 +60,13 @@ small.ayuda{color:#7C8A76;font-size:.7rem;display:block;margin-top:3px;}
 .btn-foto{display:inline-block;margin:0;padding:8px 12px;border:1px solid var(--tierra);border-radius:7px;background:#fff;color:var(--tierra);font-size:.82rem;font-weight:600;cursor:pointer;}
 #fabFoto{position:fixed;right:16px;bottom:18px;z-index:40;width:58px;height:58px;border-radius:50%;background:var(--ocre);color:#fff;border:none;font-size:1.6rem;box-shadow:0 3px 10px rgba(0,0,0,.3);cursor:pointer;}
 #toast{display:none;position:fixed;left:50%;bottom:90px;transform:translateX(-50%);max-width:88%;background:rgba(21,44,30,.95);color:#fff;padding:10px 14px;border-radius:10px;font-size:.84rem;z-index:300;text-align:center;}
+.acc summary{cursor:pointer;font-weight:700;padding:9px 0;color:var(--tierra);list-style:none;display:flex;justify-content:space-between;align-items:center;}
+.acc summary::-webkit-details-marker{display:none;}
+.acc summary::after{content:'▾';color:#5A6B54;}
+.acc details[open] summary::after{content:'▴';}
+.acc details{border-bottom:1px solid var(--linea);}
+.acc details:last-child{border-bottom:none;}
+.cnt{display:inline-block;min-width:22px;text-align:center;background:var(--tierra);color:#fff;border-radius:20px;font-size:.72rem;padding:1px 7px;margin-left:6px;}
 </style>
 </head>
 <body>
@@ -108,6 +115,11 @@ small.ayuda{color:#7C8A76;font-size:.7rem;display:block;margin-top:3px;}
     <div class="kpi warn"><div class="num" id="kpiInsumos">0</div><div class="lbl">Insumos críticos</div></div>
     <div class="kpi"><div class="num" id="kpiLotes">0</div><div class="lbl">Lotes/Piscinas/Galpones</div></div>
   </div>
+  <div class="card acc" id="accesosDirectos">
+    <details><summary><span>🌱 Mis lotes <span class="cnt" id="cntLotes">0</span></span></summary><div id="resumenLotes"></div></details>
+    <details><summary><span>🐟 Mis piscinas <span class="cnt" id="cntPiscinas">0</span></span></summary><div id="resumenPiscinas"></div></details>
+    <details><summary><span>🐔 Mis galpones <span class="cnt" id="cntGalpones">0</span></span></summary><div id="resumenGalpones"></div></details>
+  </div>
   <div class="card"><strong>Gastos por rubro</strong><div id="graficoRubros" style="margin-top:8px;"></div></div>
   <div class="card"><strong>Insumos en stock crítico</strong><div id="listaCriticos"></div></div>
   <div class="card"><strong>Últimas actividades registradas</strong><div id="ultimasAct"></div></div>
@@ -115,6 +127,7 @@ small.ayuda{color:#7C8A76;font-size:.7rem;display:block;margin-top:3px;}
 
 <!-- CULTIVOS -->
 <section id="cultivos">
+  <button class="sec" style="margin-bottom:10px;" onclick="document.getElementById('listaLotes').scrollIntoView({behavior:'smooth'})">↓ Ir a Mis lotes</button>
   <div class="card">
     <strong>Nuevo lote de cultivo</strong>
     <label>Nombre del lote</label><input id="loteNombre" placeholder="Ej: Lote 3">
@@ -192,6 +205,7 @@ small.ayuda{color:#7C8A76;font-size:.7rem;display:block;margin-top:3px;}
 
 <!-- ACUICULTURA -->
 <section id="acuicultura">
+  <button class="sec" style="margin-bottom:10px;" onclick="document.getElementById('listaPiscinas').scrollIntoView({behavior:'smooth'})">↓ Ir a Mis piscinas</button>
   <div class="card">
     <strong>Nueva piscina</strong>
     <label>Nombre</label><input id="pisNombre" placeholder="Ej: Piscina Tilapia A">
@@ -240,6 +254,7 @@ small.ayuda{color:#7C8A76;font-size:.7rem;display:block;margin-top:3px;}
 
 <!-- AVICULTURA -->
 <section id="avicultura">
+  <button class="sec" style="margin-bottom:10px;" onclick="document.getElementById('listaGalpones').scrollIntoView({behavior:'smooth'})">↓ Ir a Mis galpones</button>
   <div class="card">
     <strong>Nuevo galpón</strong>
     <label>Nombre</label><input id="galNombre" placeholder="Ej: Galpón Ponedoras 1">
@@ -395,6 +410,17 @@ small.ayuda{color:#7C8A76;font-size:.7rem;display:block;margin-top:3px;}
   </div>
 </div>
 <div id="toast"></div>
+
+<div id="editorActividad" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:130;align-items:center;justify-content:center;padding:14px;">
+  <div class="card" style="max-width:480px;width:100%;margin:0;max-height:92vh;overflow-y:auto;">
+    <strong>✎ Editar actividad</strong>
+    <div id="eaCampos"></div>
+    <div class="footer-acc" style="margin-top:12px;">
+      <button class="sec" onclick="guardarEdicionRegistro()">Guardar cambios</button>
+      <button class="sec" onclick="cerrarEditorActividad()">Cancelar</button>
+    </div>
+  </div>
+</div>
 
 <div id="visorFoto" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:200;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:12px;">
   <img id="visorImg" alt="Foto" style="max-width:100%;max-height:80vh;border-radius:8px;">
@@ -895,6 +921,8 @@ function renderLotes(){
     return `<div class="item"><div class="item-txt"><div class="item-top" style="cursor:pointer;color:var(--tierra);" onclick="abrirLote('${l.id}')">${esc(l.nombre)} ›</div><div class="item-sub">${partes.join(' · ')}</div>${infoGeoFotos(l,false)}</div>
     <div class="item-acc"><button class="sec" onclick="abrirLote('${l.id}')">Abrir</button><button class="mini-del" onclick="borrarLote('${l.id}')">🗑</button></div></div>`;
   }).join('') || '<p class="vacio">Sin lotes registrados.</p>';
+
+  renderAccesos();
 }
 function renderPiscinas(){
   const l = datos.lotes.filter(x=>x.tipo==='piscina');
@@ -908,6 +936,8 @@ function renderPiscinas(){
     return `<div class="item"><div class="item-txt"><div class="item-top" style="cursor:pointer;color:var(--agua);" onclick="abrirLote('${p.id}')">${esc(p.nombre)} ›</div><div class="item-sub">${partes.filter(Boolean).join(' · ')}</div>${infoGeoFotos(p,false)}</div>
     <div class="item-acc"><button class="sec" onclick="abrirLote('${p.id}')">Abrir</button><button class="mini-del" onclick="borrarLote('${p.id}')">🗑</button></div></div>`;
   }).join('') || '<p class="vacio">Sin piscinas.</p>';
+
+  renderAccesos();
 }
 function renderGalpones(){
   const l = datos.lotes.filter(x=>x.tipo==='galpon');
@@ -920,6 +950,8 @@ function renderGalpones(){
     return `<div class="item"><div class="item-txt"><div class="item-top" style="cursor:pointer;color:var(--agua);" onclick="abrirLote('${g.id}')">${esc(g.nombre)} ›</div><div class="item-sub">${partes.filter(Boolean).join(' · ')}</div>${infoGeoFotos(g,false)}</div>
     <div class="item-acc"><button class="sec" onclick="abrirLote('${g.id}')">Abrir</button><button class="mini-del" onclick="borrarLote('${g.id}')">🗑</button></div></div>`;
   }).join('') || '<p class="vacio">Sin galpones.</p>';
+
+  renderAccesos();
 }
 
 // ---------------- Registro de actividades de cultivo ----------------
@@ -969,7 +1001,7 @@ function renderRegistros(){
     <div class="item"><div class="item-txt"><div class="item-top">${nombreActividad(r.actividadId)}</div>
     <div class="item-sub">${esc(nombreLote(r.loteId))} · ${textoRegistro(r)}</div>
     ${r.notas? `<div class="item-sub">${esc(r.notas)}</div>`:''}${galeria('registros', r.id, r.fotos)}</div>
-    <div class="item-acc">${botonesFotoItem('registros', r.id)}<button class="mini-del" onclick="borrarRegistro('${r.id}')">🗑</button></div></div>`).join('') || '<p class="vacio">Sin actividades registradas.</p>';
+    <div class="item-acc">${botonEditarReg('registros', r.id)}${botonesFotoItem('registros', r.id)}<button class="mini-del" onclick="borrarRegistro('${r.id}')">🗑</button></div></div>`).join('') || '<p class="vacio">Sin actividades registradas.</p>';
 }
 
 // ---------------- Registro pecuario (acuicultura/avicultura) ----------------
@@ -1000,7 +1032,7 @@ function textoPecuario(r){
 }
 function itemPecuario(r){
   return `<div class="item"><div class="item-txt"><div class="item-top">${esc(r.actividad)}</div><div class="item-sub">${esc(nombreLote(r.loteId))} · ${textoPecuario(r)}</div>${r.notas? `<div class="item-sub">${esc(r.notas)}</div>`:''}${galeria('registrosPecuarios', r.id, r.fotos)}</div>
-    <div class="item-acc">${botonesFotoItem('registrosPecuarios', r.id)}<button class="mini-del" onclick="borrarRegPecuario('${r.id}')">🗑</button></div></div>`;
+    <div class="item-acc">${botonEditarReg('registrosPecuarios', r.id)}${botonesFotoItem('registrosPecuarios', r.id)}<button class="mini-del" onclick="borrarRegPecuario('${r.id}')">🗑</button></div></div>`;
 }
 function renderRegPecuarios(){
   const pis = datos.registrosPecuarios.filter(r=>r.modulo==='acuicultura');
@@ -1051,6 +1083,133 @@ const PISTAS = {
 function pistaPecuaria(pre){
   const a = document.getElementById(pre+'Actividad').value;
   document.getElementById(pre+'Pista').textContent = PISTAS[a] || '';
+}
+
+// ---------------- Accesos directos en el Resumen ----------------
+function resumenCultivo(l){
+  const geo = calcularGeo(l.puntos), edad = edadTexto(l.fechaSiembra);
+  const partes = [esc(nombreCultivo(l.cultivoId))];
+  if(l.variedad) partes.push(esc(l.variedad));
+  if(edad) partes.push('Edad: '+edad.split(' (')[0]);
+  if(l.numPlantas) partes.push(l.numPlantas.toLocaleString('es-EC')+' plantas');
+  if(geo) partes.push(textoArea(geo.areaM2)); else if(l.area) partes.push(esc(l.area));
+  return partes.join(' · ');
+}
+function resumenPiscina(p){
+  const st = calcularStock(p), edad = edadTexto(p.fechaInicio);
+  const partes = [esc(p.especie||'')];
+  if(edad) partes.push('Edad: '+edad.split(' (')[0]);
+  partes.push('Actual: '+st.actual.toLocaleString('es-EC')+' peces');
+  return partes.filter(Boolean).join(' · ');
+}
+function resumenGalpon(g){
+  const st = calcularStock(g), sem = semanasDesde(g.fechaInicio);
+  const partes = [esc(g.tipoAve||'')];
+  if(g.raza) partes.push(esc(g.raza));
+  if(sem!==null) partes.push('Edad: '+sem+' semanas');
+  partes.push('Actuales: '+st.actual.toLocaleString('es-EC')+' aves');
+  return partes.filter(Boolean).join(' · ');
+}
+function renderAccesos(){
+  const grupos = [
+    ['cultivo','resumenLotes','cntLotes',resumenCultivo,'Aún no hay lotes. Créalos en Cultivos.'],
+    ['piscina','resumenPiscinas','cntPiscinas',resumenPiscina,'Aún no hay piscinas. Créalas en Acuicultura.'],
+    ['galpon','resumenGalpones','cntGalpones',resumenGalpon,'Aún no hay galpones. Créalos en Avicultura.']
+  ];
+  grupos.forEach(([tipo,idLista,idCnt,fn,vacio])=>{
+    const cont = document.getElementById(idLista), cnt = document.getElementById(idCnt);
+    if(!cont) return;
+    const items = datos.lotes.filter(l=>l.tipo===tipo);
+    if(cnt) cnt.textContent = items.length;
+    cont.innerHTML = items.map(l=>`<div class="item"><div class="item-txt"><div class="item-top" style="cursor:pointer;color:var(--tierra);" onclick="abrirLote('${l.id}')">${esc(l.nombre)} ›</div><div class="item-sub">${fn(l)}</div></div><div class="item-acc"><button class="sec" onclick="abrirLote('${l.id}')">Abrir</button></div></div>`).join('') || '<p class="vacio">'+vacio+'</p>';
+  });
+}
+
+// ---------------- Editar actividades ----------------
+const ACT_PECUARIAS = {
+  acuicultura:['Siembra de alevines','Alimentación','Muestreo','Recambio de agua','Cosecha','Sanidad','Mortalidad','Ajuste de inventario'],
+  avicultura:['Recolección de huevos','Alimentación','Sanidad / vacunación','Limpieza galpón','Venta de aves','Ingreso de aves','Mortalidad','Ajuste de inventario']
+};
+let registroEditando = null;
+function botonEditarReg(col, id){
+  return '<button class="mini-edit" title="Editar actividad" onclick="editarRegistro(\''+col+'\',\''+id+'\')">✎</button>';
+}
+function opcionesSel(pares, sel){
+  return pares.map(([v,t])=>'<option value="'+esc(v)+'"'+(v===sel?' selected':'')+'>'+esc(t)+'</option>').join('');
+}
+function editarRegistro(col, id){
+  const r = (datos[col]||[]).find(x=>x.id===id); if(!r) return;
+  registroEditando = {col, id};
+  let html = '';
+  if(col==='registros'){
+    const lista = x=>x.map(v=>[v,v]);
+    html = `
+    <label>Lote</label><select id="eaLote">${opcionesSel(datos.lotes.filter(l=>l.tipo==='cultivo').map(l=>[l.id,l.nombre]), r.loteId)}</select>
+    <div class="fila2">
+      <div><label>Etapa</label><select id="eaEtapa">${opcionesSel(lista(['Vivero','Trasplante','Mantenimiento','Cosecha']), r.etapa)}</select></div>
+      <div><label>Fecha</label><input type="date" id="eaFecha" value="${esc(r.fecha)}"></div>
+    </div>
+    <label>Fase / Actividad</label><select id="eaActividad">${opcionesSel(datos.catActividades.map(a=>[a.id, a.fase+' — '+a.actividad]), r.actividadId)}</select>
+    <label>Método de ejecución</label><select id="eaMetodo">${opcionesSel(lista(['Manual','Guadaña','Herbicida','Mecanizado','Otro']), r.metodo)}</select>
+    <label>Insumo aplicado</label><select id="eaInsumo"><option value="">— Ninguno —</option>${opcionesSel(datos.catInsumos.map(i=>[i.id,i.nombre]), r.insumoId)}</select>
+    <div class="fila3">
+      <div><label>Dosis</label><input id="eaDosis" value="${esc(r.dosis)}"></div>
+      <div><label>Unidad</label><select id="eaUnidad">${opcionesSel(lista(['g/planta','g/ha','ml/L agua','L/bomba','kg/ha']), r.dosisUnidad)}</select></div>
+      <div><label>Cantidad usada</label><input id="eaCantidad" value="${r.cantidad||''}"></div>
+    </div>
+    <label>Costo del insumo ($)</label><input type="number" id="eaCostoInsumo" value="${r.costoInsumo||''}">
+    <div class="fila3">
+      <div><label>Jornalero</label><input id="eaJornalero" value="${esc(r.jornalero)}"></div>
+      <div><label>Jornales/Horas</label><input id="eaJornales" value="${esc(r.jornales)}"></div>
+      <div><label>Costo M. de obra</label><input type="number" id="eaCostoMO" value="${r.costoMO||''}"></div>
+    </div>
+    <label>Notas</label><textarea id="eaNotas">${esc(r.notas)}</textarea>
+    <small class="ayuda">Las fotos se agregan o se eliminan con los botones 📷 🖼 de la actividad.</small>`;
+  }else{
+    const base = ACT_PECUARIAS[r.modulo] || ACT_PECUARIAS.acuicultura;
+    const acts = base.includes(r.actividad) ? base : [r.actividad].concat(base);
+    html = `
+    <label>Actividad</label><select id="eaActividadP" onchange="document.getElementById('eaPista').textContent = PISTAS[this.value]||''">${opcionesSel(acts.map(a=>[a,a]), r.actividad)}</select>
+    <label>Fecha</label><input type="date" id="eaFecha" value="${esc(r.fecha)}">
+    <div class="fila2">
+      <div><label>Cantidad (n.º)</label><input type="number" id="eaCant" value="${r.cantidad!=null ? r.cantidad : ''}"></div>
+      <div><label>Peso (libras)</label><input type="number" step="0.1" id="eaLibras" value="${r.libras!=null ? r.libras : ''}"></div>
+    </div>
+    <small class="ayuda" id="eaPista">${esc(PISTAS[r.actividad]||'')}</small>
+    <label>Detalle</label><input id="eaDetalle" value="${esc(r.detalle)}">
+    <label>Notas</label><textarea id="eaNotas">${esc(r.notas)}</textarea>
+    <small class="ayuda">Las fotos se agregan o se eliminan con los botones 📷 🖼 de la actividad.</small>`;
+  }
+  document.getElementById('eaCampos').innerHTML = html;
+  document.getElementById('editorActividad').style.display = 'flex';
+}
+function cerrarEditorActividad(){ document.getElementById('editorActividad').style.display='none'; registroEditando=null; }
+function guardarEdicionRegistro(){
+  if(!registroEditando) return;
+  const {col, id} = registroEditando;
+  const r = (datos[col]||[]).find(x=>x.id===id); if(!r){ cerrarEditorActividad(); return; }
+  const v = i=>document.getElementById(i).value;
+  const num = i=>{ const x = numero(v(i)); return isFinite(x) ? x : null; };
+  if(col==='registros'){
+    // el inventario de insumos se corrige: se devuelve lo anterior y se descuenta lo nuevo
+    const insViejo = datos.catInsumos.find(i=>i.id===r.insumoId), qViejo = Number(r.cantidad)||0;
+    if(insViejo && qViejo>0) insViejo.stock += qViejo;
+    const insNuevo = datos.catInsumos.find(i=>i.id===v('eaInsumo')), qNuevo = parseFloat(v('eaCantidad'))||0;
+    if(insNuevo && qNuevo>0) insNuevo.stock = Math.max(0, insNuevo.stock - qNuevo);
+    r.loteId = v('eaLote'); r.etapa = v('eaEtapa'); r.fecha = v('eaFecha') || r.fecha;
+    r.actividadId = v('eaActividad'); r.metodo = v('eaMetodo');
+    r.insumoId = v('eaInsumo'); r.dosis = v('eaDosis').trim(); r.dosisUnidad = v('eaUnidad'); r.cantidad = qNuevo;
+    r.costoInsumo = parseFloat(v('eaCostoInsumo'))||0;
+    r.jornalero = v('eaJornalero').trim(); r.jornales = v('eaJornales').trim(); r.costoMO = parseFloat(v('eaCostoMO'))||0;
+    r.notas = v('eaNotas').trim();
+  }else{
+    r.actividad = v('eaActividadP'); r.fecha = v('eaFecha') || r.fecha;
+    r.cantidad = num('eaCant'); r.libras = num('eaLibras');
+    r.detalle = v('eaDetalle').trim(); r.notas = v('eaNotas').trim();
+  }
+  cerrarEditorActividad();
+  guardar(); renderTodo();
+  aviso('✔ Actividad actualizada');
 }
 
 // ---------------- Ficha del lote (al abrir un cultivo) ----------------
@@ -1149,7 +1308,7 @@ function renderDetallePecuario(l){
     <button class="sec" style="margin:8px 0;" onclick="registrarActividadEn('${l.id}')">＋ Registrar actividad</button>
     ${regs.map(r=>`<div class="item"><div class="item-txt"><div class="item-top">${esc(r.actividad)}</div>
       <div class="item-sub">${textoPecuario(r)}</div>${r.notas ? `<div class="item-sub">${esc(r.notas)}</div>` : ''}${galeria('registrosPecuarios', r.id, r.fotos, 60)}</div>
-      <div class="item-acc">${botonesFotoItem('registrosPecuarios', r.id)}</div></div>`).join('') || '<p class="vacio">Aún no hay actividades.</p>'}
+      <div class="item-acc">${botonEditarReg('registrosPecuarios', r.id)}${botonesFotoItem('registrosPecuarios', r.id)}</div></div>`).join('') || '<p class="vacio">Aún no hay actividades.</p>'}
   </div>
   <div class="card"><strong>Ingresos y gastos</strong>
     <div style="margin-top:6px;">
@@ -1205,7 +1364,7 @@ function renderDetalleCultivo(){
     <button class="sec" style="margin:8px 0;" onclick="registrarActividadEn('${l.id}')">＋ Registrar actividad en este lote</button>
     ${regs.map(r=>`<div class="item"><div class="item-txt"><div class="item-top">${nombreActividad(r.actividadId)}</div>
       <div class="item-sub">${textoRegistro(r)}</div>${r.notas ? `<div class="item-sub">${esc(r.notas)}</div>` : ''}${galeria('registros', r.id, r.fotos, 60)}</div>
-      <div class="item-acc">${botonesFotoItem('registros', r.id)}</div></div>`).join('') || '<p class="vacio">Aún no hay actividades en este lote.</p>'}
+      <div class="item-acc">${botonEditarReg('registros', r.id)}${botonesFotoItem('registros', r.id)}</div></div>`).join('') || '<p class="vacio">Aún no hay actividades en este lote.</p>'}
   </div>
   <div class="card"><strong>Ingresos y gastos del lote</strong>
     <div style="margin-top:6px;">
@@ -1437,6 +1596,8 @@ function renderTodo(){
   renderCatalogos(); renderSelects(); renderLotes(); renderPiscinas(); renderGalpones();
   renderRegistros(); renderRegPecuarios(); renderMovimientos(); renderResumen();
   refrescarDetalle();
+
+  renderAccesos();
 }
 
 // ---------------- Firebase: Auth + Sincronización ----------------
