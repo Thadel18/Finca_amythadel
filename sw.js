@@ -1,4 +1,4 @@
-const CACHE_NAME = 'finca-amythadel-cache-v10';
+const CACHE_NAME = 'finca-amythadel-cache-v11';
 const TILE_CACHE = 'finca-tiles-v1';
 const LOCALES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 const EXTERNOS = [

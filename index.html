@@ -691,6 +691,8 @@ table.tabla{border-collapse:collapse;width:100%;font-size:.76rem;min-width:620px
 .tip-lote{background:transparent;border:none;box-shadow:none;color:#fff;font-weight:700;text-shadow:0 0 3px #000,0 0 3px #000;}
 .leaflet-tooltip.tip-lote::before{display:none;}
 @media(min-width:900px){ main{max-width:980px;} }
+.vertice .v-num{width:26px;height:26px;border-radius:50%;background:#C98A2C;color:#fff;border:2px solid #fff;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.55);cursor:move;}
+.gps-ok{color:#1F5A2A;} .gps-med{color:#7A5A00;} .gps-mal{color:#8E2A1B;}
 </style>
 <script>
 /* @preserve
@@ -843,13 +845,14 @@ small.ayuda{color:#7C8A76;font-size:.7rem;display:block;margin-top:3px;}
     </div>
     <label>Área (se calcula sola con los puntos del polígono)</label><input id="loteArea" placeholder="Se llena al agregar los puntos">
     <div class="subgrupo">Vértices del polígono del lote (opcional)</div>
-    <small class="ayuda">Agrega los puntos en orden, caminando alrededor del lote. Con 3 o más puntos se calcula el área.</small>
+    <small class="ayuda">Agrega los puntos en orden, caminando alrededor del lote. Con 3 o más puntos se calcula el área. Después de guardar podrás ajustarlos arrastrándolos en el mapa del lote.</small>
     <div class="fila3">
       <input id="lotePtLat" placeholder="Latitud">
       <input id="lotePtLng" placeholder="Longitud">
       <button class="sec" type="button" onclick="agregarPunto('lote')">+ Punto</button>
     </div>
-    <button class="sec" type="button" style="margin-top:6px;width:100%;" onclick="usarUbicacionPunto('lote')">📍 Usar mi ubicación como punto</button>
+    <button class="sec" type="button" style="margin-top:6px;width:100%;" onclick="usarUbicacionPunto('lote')">📍 Capturar punto con GPS (promedia lecturas)</button>
+    <button class="sec" type="button" style="margin-top:6px;width:100%;" onclick="abrirImportar('lote')">📥 Importar puntos (GPX, KML, CSV, UTM)</button>
     <div id="lotePuntosLista" style="margin-top:6px;font-size:.78rem;"></div>
     <div id="loteGeoCalc" class="geo-calc"></div>
     <div class="subgrupo">Fotos del lote (opcional)</div>
@@ -923,7 +926,8 @@ small.ayuda{color:#7C8A76;font-size:.7rem;display:block;margin-top:3px;}
       <input id="pisPtLng" placeholder="Longitud">
       <button class="sec" type="button" onclick="agregarPunto('pis')">+ Punto</button>
     </div>
-    <button class="sec" type="button" style="margin-top:6px;width:100%;" onclick="usarUbicacionPunto('pis')">📍 Usar mi ubicación como punto</button>
+    <button class="sec" type="button" style="margin-top:6px;width:100%;" onclick="usarUbicacionPunto('pis')">📍 Capturar punto con GPS (promedia lecturas)</button>
+    <button class="sec" type="button" style="margin-top:6px;width:100%;" onclick="abrirImportar('pis')">📥 Importar puntos (GPX, KML, CSV, UTM)</button>
     <div id="pisPuntosLista" style="margin-top:6px;font-size:.78rem;"></div>
     <div id="pisGeoCalc" class="geo-calc"></div>
     <div class="subgrupo">Fotos (opcional)</div>
@@ -989,7 +993,8 @@ small.ayuda{color:#7C8A76;font-size:.7rem;display:block;margin-top:3px;}
       <input id="galPtLng" placeholder="Longitud">
       <button class="sec" type="button" onclick="agregarPunto('gal')">+ Punto</button>
     </div>
-    <button class="sec" type="button" style="margin-top:6px;width:100%;" onclick="usarUbicacionPunto('gal')">📍 Usar mi ubicación como punto</button>
+    <button class="sec" type="button" style="margin-top:6px;width:100%;" onclick="usarUbicacionPunto('gal')">📍 Capturar punto con GPS (promedia lecturas)</button>
+    <button class="sec" type="button" style="margin-top:6px;width:100%;" onclick="abrirImportar('gal')">📥 Importar puntos (GPX, KML, CSV, UTM)</button>
     <div id="galPuntosLista" style="margin-top:6px;font-size:.78rem;"></div>
     <div id="galGeoCalc" class="geo-calc"></div>
     <div class="subgrupo">Fotos (opcional)</div>
@@ -1165,6 +1170,44 @@ small.ayuda{color:#7C8A76;font-size:.7rem;display:block;margin-top:3px;}
       <button class="sec" onclick="guardarEdicionRegistro()">Guardar cambios</button>
       <button class="sec" onclick="cerrarEditorActividad()">Cancelar</button>
     </div>
+  </div>
+</div>
+
+<div id="modalGPS" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:140;align-items:center;justify-content:center;padding:14px;">
+  <div class="card" style="max-width:420px;width:100%;margin:0;">
+    <strong>📍 Capturar punto con GPS</strong>
+    <small class="ayuda">Párate en el punto, a cielo abierto, y espera 20 a 30 segundos sin moverte. La app promedia las lecturas para dar un punto más exacto.</small>
+    <div id="gpsEstado" style="font-size:1.05rem;font-weight:700;margin:10px 0 4px;">Buscando señal GPS…</div>
+    <div id="gpsDetalle" class="geo-calc"></div>
+    <div style="background:#E2E0D2;border-radius:5px;height:8px;overflow:hidden;margin:10px 0;"><div id="gpsBarra" style="height:100%;width:0;background:var(--ocre);transition:width .4s;"></div></div>
+    <div class="footer-acc"><button class="sec" id="gpsAceptar" onclick="aceptarGPS()" disabled>✔ Usar este punto</button><button class="sec" onclick="cancelarGPS()">Cancelar</button></div>
+  </div>
+</div>
+
+<div id="modalImport" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:140;align-items:center;justify-content:center;padding:14px;">
+  <div class="card" style="max-width:480px;width:100%;margin:0;max-height:92vh;overflow-y:auto;">
+    <strong>📥 Importar puntos del polígono</strong>
+    <small class="ayuda">Acepta GPX, KML, GeoJSON, CSV o texto. Las coordenadas deben estar en WGS84 (grados decimales o UTM WGS84). Si vienen en PSAD56, conviértelas antes en QGIS.</small>
+    <label>Archivo (GPX, KML, GeoJSON, CSV, TXT)</label>
+    <input type="file" id="impArchivo" accept=".gpx,.kml,.geojson,.json,.csv,.txt,text/*" onchange="leerArchivoImport(this)">
+    <label>…o pega las coordenadas, una por línea</label>
+    <textarea id="impTexto" style="min-height:90px;" placeholder="-0.300000, -76.880000&#10;-0.300100, -76.879800"></textarea>
+    <div class="fila2">
+      <div><label>Tipo de coordenadas</label><select id="impTipo" onchange="cambiarTipoImport()"><option value="dec">Grados decimales</option><option value="utm">UTM (este, norte)</option></select></div>
+      <div id="impFilaOrden"><label>Orden</label><select id="impOrden"><option value="latlng">latitud, longitud</option><option value="lnglat">longitud, latitud</option></select></div>
+    </div>
+    <div class="fila3" id="impFilaUtm" style="display:none;">
+      <div><label>Zona UTM</label><input type="number" id="impZona" value="18" min="1" max="60"></div>
+      <div><label>Hemisferio</label><select id="impHem"><option value="S">Sur</option><option value="N">Norte</option></select></div>
+      <div><label>Orden</label><select id="impOrdenUtm"><option value="en">Este, Norte</option><option value="ne">Norte, Este</option></select></div>
+    </div>
+    <button class="sec" style="margin-top:8px;width:100%;" onclick="leerImport()">Leer puntos</button>
+    <div id="impResumen" class="geo-calc" style="margin-top:8px;"></div>
+    <div class="footer-acc" style="margin-top:10px;">
+      <button class="sec" id="impReemplazar" onclick="aplicarImportacion('reemplazar')" disabled>Reemplazar los puntos</button>
+      <button class="sec" id="impAgregar" onclick="aplicarImportacion('agregar')" disabled>Agregar a los actuales</button>
+    </div>
+    <button class="sec" style="width:100%;margin-top:8px;" onclick="cerrarImportar()">Cancelar</button>
   </div>
 </div>
 
@@ -1367,12 +1410,15 @@ let fotosTemp = {lote:[], pis:[], gal:[], reg:[], pisReg:[], galReg:[]};
 
 // ---------- Geometría: área, perímetro y dimensiones a partir de los puntos ----------
 function numero(x){ return parseFloat(String(x).replace(',', '.')); }
+function mPorGrado(latDeg){
+  const f = latDeg*Math.PI/180;
+  return {lat:111132.954-559.822*Math.cos(2*f)+1.175*Math.cos(4*f), lng:111412.84*Math.cos(f)-93.5*Math.cos(3*f)+0.118*Math.cos(5*f)};
+}
 function calcularGeo(puntos){
   const pts = (puntos||[]).map(p=>({lat:numero(p.lat), lng:numero(p.lng)})).filter(p=>isFinite(p.lat) && isFinite(p.lng));
   if(pts.length<3) return null;
-  const k = Math.PI/180, R = 6371008.8;
-  const lat0 = pts.reduce((a,p)=>a+p.lat,0)/pts.length*k;
-  const xy = pts.map(p=>({x:R*(p.lng-pts[0].lng)*k*Math.cos(lat0), y:R*(p.lat-pts[0].lat)*k}));
+  const mg = mPorGrado(pts.reduce((a,p)=>a+p.lat,0)/pts.length);
+  const xy = pts.map(p=>({x:(p.lng-pts[0].lng)*mg.lng, y:(p.lat-pts[0].lat)*mg.lat}));
   let a=0, per=0;
   for(let i=0;i<xy.length;i++){
     const j=(i+1)%xy.length;
@@ -1592,27 +1638,27 @@ async function procesarFotoRapida(input){
 function agregarPunto(prefix){
   const lat = document.getElementById(prefix+'PtLat').value.trim();
   const lng = document.getElementById(prefix+'PtLng').value.trim();
-  if(!lat || !lng){ alert('Ingresa latitud y longitud.'); return; }
+  const err = validarCoord(lat, lng); if(err){ alert(err); return; }
   puntosTemp[prefix].push({lat, lng});
   document.getElementById(prefix+'PtLat').value=''; document.getElementById(prefix+'PtLng').value='';
   renderPuntosTemp(prefix);
 }
 function usarUbicacionPunto(prefix){
-  if(!navigator.geolocation){ alert('Geolocalización no disponible en este navegador.'); return; }
-  navigator.geolocation.getCurrentPosition(pos=>{
-    puntosTemp[prefix].push({lat: pos.coords.latitude.toFixed(6), lng: pos.coords.longitude.toFixed(6)});
+  capturarGPS(r=>{
+    puntosTemp[prefix].push({lat:r.lat.toFixed(7), lng:r.lng.toFixed(7), prec:Math.round(r.prec)});
     renderPuntosTemp(prefix);
-  }, ()=> alert('No se pudo obtener la ubicación.'));
+    aviso('✔ Punto agregado (±'+Math.round(r.prec)+' m, '+r.n+' lecturas)');
+  });
 }
 function quitarPunto(prefix, idx){ puntosTemp[prefix].splice(idx,1); renderPuntosTemp(prefix); }
 function renderPuntosTemp(prefix){
   const cont = document.getElementById(prefix+'PuntosLista'); if(!cont) return;
-  cont.innerHTML = puntosTemp[prefix].length ? puntosTemp[prefix].map((p,i)=>
-    `<div>${i+1}. ${p.lat}, ${p.lng} <button class="mini-del" onclick="quitarPunto('${prefix}',${i})">🗑</button></div>`).join('')
+  cont.innerHTML = puntosTemp[prefix].length ? puntosTemp[prefix].map((q,i)=>
+    `<div>${i+1}. ${esc(q.lat)}, ${esc(q.lng)}${precTxt(q)} <button class="mini-del" onclick="quitarPunto('${prefix}',${i})">🗑</button></div>`).join('')
     : '<span class="ayuda">Sin puntos aún — agrega al menos 3 para formar un polígono.</span>';
   const geo = calcularGeo(puntosTemp[prefix]);
   const calc = document.getElementById(prefix+'GeoCalc');
-  if(calc) calc.innerHTML = geo ? textoGeo(geo) : '';
+  if(calc) calc.innerHTML = (geo ? textoGeo(geo) : '') + avisosPuntos(puntosTemp[prefix]);
   const areaId = {lote:'loteArea', pis:'pisArea'}[prefix];
   if(areaId && geo){ document.getElementById(areaId).value = textoArea(geo.areaM2); }
 }
@@ -2043,6 +2089,496 @@ function guardarEdicionRegistro(){
   aviso('✔ Actividad actualizada');
 }
 
+// ---------------- Precisión de los puntos: GPS, validaciones y avisos ----------------
+function aXY(pts){
+  const v = (pts||[]).map(q=>({lat:numero(q.lat), lng:numero(q.lng)})).filter(q=>isFinite(q.lat) && isFinite(q.lng));
+  if(!v.length) return [];
+  const mg = mPorGrado(v.reduce((a,q)=>a+q.lat,0)/v.length);
+  return v.map(q=>({x:(q.lng-v[0].lng)*mg.lng, y:(q.lat-v[0].lat)*mg.lat}));
+}
+function segCruzan(a,b,c,d){
+  const o = (p,q,r)=>(q.x-p.x)*(r.y-p.y)-(q.y-p.y)*(r.x-p.x);
+  return (o(a,b,c)*o(a,b,d)<0) && (o(c,d,a)*o(c,d,b)<0);
+}
+function poligonoSeCruza(pts){
+  const xy = aXY(pts), n = xy.length; if(n<4) return false;
+  for(let i=0;i<n;i++){
+    for(let j=i+1;j<n;j++){
+      if(j===(i+1)%n || (j+1)%n===i) continue;
+      if(segCruzan(xy[i], xy[(i+1)%n], xy[j], xy[(j+1)%n])) return true;
+    }
+  }
+  return false;
+}
+function ordenarPorAngulo(pts){
+  const xy = aXY(pts); if(xy.length<3 || xy.length!==pts.length) return pts.slice();
+  const cx = xy.reduce((a,q)=>a+q.x,0)/xy.length, cy = xy.reduce((a,q)=>a+q.y,0)/xy.length;
+  return xy.map((q,i)=>({i, ang:Math.atan2(q.y-cy, q.x-cx)})).sort((a,b)=>a.ang-b.ang).map(o=>pts[o.i]);
+}
+function precTxt(q){ return (q && q.prec!=null && isFinite(Number(q.prec))) ? ' (±'+Math.round(Number(q.prec))+' m)' : ''; }
+function precResumen(l){
+  const ps = (l.puntos||[]).map(q=>Number(q.prec)).filter(x=>isFinite(x) && x>0);
+  return ps.length ? ' · precisión ±'+Math.round(Math.max(...ps))+' m (peor punto)' : '';
+}
+function avisosPuntos(pts){
+  const lista = pts||[], av = [];
+  if(lista.length>=4 && poligonoSeCruza(lista)) av.push('⚠ Los puntos se cruzan: el área sale menor a la real. Ordénalos alrededor del lote (🔄 Ordenar puntos).');
+  const ps = lista.map(q=>Number(q.prec)).filter(x=>isFinite(x) && x>0), peor = ps.length ? Math.max(...ps) : 0;
+  if(peor>20) av.push('⚠ Hay puntos con precisión GPS baja (±'+Math.round(peor)+' m). Repítelos a cielo abierto o ajústalos arrastrándolos en el mapa.');
+  const xy = aXY(lista); let dup = false;
+  for(let i=0;i<xy.length && !dup;i++) for(let j=i+1;j<xy.length;j++){ if(Math.hypot(xy[i].x-xy[j].x, xy[i].y-xy[j].y)<1.5){ dup = true; break; } }
+  if(dup) av.push('⚠ Hay puntos casi iguales (menos de 1,5 m): quizá se capturó el mismo punto dos veces.');
+  return av.length ? '<div style="color:#8E2A1B;margin-top:4px;">'+av.map(esc).join('<br>')+'</div>' : '';
+}
+function validarCoord(lat, lng){
+  const a = numero(lat), b = numero(lng);
+  if(!isFinite(a) || !isFinite(b)) return 'Escribe números válidos en grados decimales (ej. -0.300000).';
+  if(Math.abs(a)>90) return 'La latitud debe estar entre -90 y 90. Si son coordenadas UTM usa 📥 Importar → UTM. ¿Intercambiaste latitud y longitud?';
+  if(Math.abs(b)>180) return 'La longitud debe estar entre -180 y 180.';
+  return '';
+}
+
+// ---------- Captura con GPS (alta precisión, promedio de lecturas) ----------
+let gpsSesion = null;
+function detenerGPS(){
+  if(gpsSesion){
+    if(gpsSesion.watch!=null && navigator.geolocation && navigator.geolocation.clearWatch) navigator.geolocation.clearWatch(gpsSesion.watch);
+    clearInterval(gpsSesion.timer);
+  }
+  gpsSesion = null;
+}
+function capturarGPS(alAceptar){
+  if(!navigator.geolocation){ alert('Este dispositivo o navegador no tiene GPS disponible.'); return; }
+  detenerGPS();
+  gpsSesion = {muestras:[], alAceptar, watch:null, timer:null, inicio:Date.now(), error:''};
+  document.getElementById('modalGPS').style.display = 'flex';
+  actualizarGPS();
+  gpsSesion.watch = navigator.geolocation.watchPosition(onGPS, errGPS, {enableHighAccuracy:true, maximumAge:0, timeout:30000});
+  gpsSesion.timer = setInterval(actualizarGPS, 500);
+}
+function onGPS(pos){
+  if(!gpsSesion) return;
+  const c = pos.coords; if(!isFinite(c.latitude) || !isFinite(c.longitude)) return;
+  gpsSesion.error = '';
+  gpsSesion.muestras.push({lat:c.latitude, lng:c.longitude, acc:(isFinite(c.accuracy) && c.accuracy>0) ? c.accuracy : 999});
+  actualizarGPS();
+}
+function errGPS(err){
+  if(!gpsSesion) return;
+  gpsSesion.error = err.code===1 ? 'Permiso de ubicación denegado. Actívalo en los ajustes del navegador y vuelve a intentar.'
+    : (err.code===3 ? 'La señal GPS tarda en llegar. Sal a cielo abierto y espera un momento.' : 'No se pudo obtener la ubicación.');
+  actualizarGPS();
+}
+function resultadoGPS(){
+  const m = gpsSesion ? gpsSesion.muestras : []; if(!m.length) return null;
+  const mejor = Math.min(...m.map(x=>x.acc));
+  let usables = m.filter(x=>x.acc<=Math.max(mejor*2, 15) && x.acc<=100);
+  if(!usables.length) usables = [m.reduce((a,b)=>b.acc<a.acc?b:a)];
+  let sw = 0, sla = 0, sln = 0;
+  usables.forEach(x=>{ const w = 1/(x.acc*x.acc); sw += w; sla += w*x.lat; sln += w*x.lng; });
+  return {lat:sla/sw, lng:sln/sw, prec:Math.round(mejor*10)/10, n:usables.length, total:m.length};
+}
+function actualizarGPS(){
+  const est = document.getElementById('gpsEstado'); if(!est || !gpsSesion) return;
+  const seg = Math.round((Date.now()-gpsSesion.inicio)/1000), m = gpsSesion.muestras, r = resultadoGPS();
+  document.getElementById('gpsBarra').style.width = Math.min(100, seg/30*100)+'%';
+  document.getElementById('gpsAceptar').disabled = !r;
+  let det = '';
+  if(gpsSesion.error){ est.textContent = '⚠ '+gpsSesion.error; est.className = 'gps-mal'; }
+  else if(!r){ est.textContent = 'Buscando señal GPS… '+seg+' s'; est.className = ''; if(seg>15) det = 'Si no llega señal, sal a cielo abierto y revisa que el GPS esté activado.'; }
+  else{
+    const ult = m[m.length-1];
+    const cal = r.prec<=8 ? ['🟢 Excelente','gps-ok'] : (r.prec<=15 ? ['🟡 Aceptable','gps-med'] : ['🔴 Débil: sal a cielo abierto','gps-mal']);
+    est.textContent = cal[0]+' · mejor lectura ±'+Math.round(r.prec)+' m'; est.className = cal[1];
+    det = 'Lectura actual: ±'+Math.round(ult.acc)+' m · Lecturas: '+r.total+' (se promedian '+r.n+') · '+seg+' s'+(seg<20 ? '. Espera 20 a 30 s para mayor exactitud.' : '.');
+  }
+  document.getElementById('gpsDetalle').textContent = det;
+}
+function aceptarGPS(){
+  const r = resultadoGPS(); if(!r) return;
+  if(r.prec>25 && !confirm('La precisión es baja (±'+Math.round(r.prec)+' m). ¿Usar este punto de todas formas?')) return;
+  const cb = gpsSesion.alAceptar;
+  detenerGPS(); document.getElementById('modalGPS').style.display = 'none';
+  cb(r);
+}
+function cancelarGPS(){ detenerGPS(); document.getElementById('modalGPS').style.display = 'none'; }
+
+// ---------- UTM (WGS84) ----------
+const WGS = {a:6378137, f:1/298.257223563, k0:0.9996};
+function latLngAUtm(lat, lng, zona){
+  const e2 = WGS.f*(2-WGS.f), ep2 = e2/(1-e2), a = WGS.a, k0 = WGS.k0;
+  zona = zona || Math.floor((lng+180)/6)+1;
+  const lng0 = ((zona-1)*6-180+3)*Math.PI/180, phi = lat*Math.PI/180, lam = lng*Math.PI/180;
+  const N = a/Math.sqrt(1-e2*Math.sin(phi)**2), T = Math.tan(phi)**2, C = ep2*Math.cos(phi)**2, A = Math.cos(phi)*(lam-lng0);
+  const M = a*((1-e2/4-3*e2**2/64-5*e2**3/256)*phi-(3*e2/8+3*e2**2/32+45*e2**3/1024)*Math.sin(2*phi)+(15*e2**2/256+45*e2**3/1024)*Math.sin(4*phi)-(35*e2**3/3072)*Math.sin(6*phi));
+  const E = k0*N*(A+(1-T+C)*A**3/6+(5-18*T+T**2+72*C-58*ep2)*A**5/120)+500000;
+  let Nn = k0*(M+N*Math.tan(phi)*(A**2/2+(5-T+9*C+4*C**2)*A**4/24+(61-58*T+T**2+600*C-330*ep2)*A**6/720));
+  if(lat<0) Nn += 10000000;
+  return {zona, este:E, norte:Nn, hemisferio:lat<0 ? 'S' : 'N'};
+}
+function utmALatLng(E, Nn, zona, hem){
+  const e2 = WGS.f*(2-WGS.f), ep2 = e2/(1-e2), a = WGS.a, k0 = WGS.k0;
+  const x = E-500000; let y = Nn; if(hem==='S') y -= 10000000;
+  const lng0 = ((zona-1)*6-180+3)*Math.PI/180;
+  const M = y/k0, mu = M/(a*(1-e2/4-3*e2**2/64-5*e2**3/256));
+  const e1 = (1-Math.sqrt(1-e2))/(1+Math.sqrt(1-e2));
+  const phi1 = mu+(3*e1/2-27*e1**3/32)*Math.sin(2*mu)+(21*e1**2/16-55*e1**4/32)*Math.sin(4*mu)+(151*e1**3/96)*Math.sin(6*mu)+(1097*e1**4/512)*Math.sin(8*mu);
+  const N1 = a/Math.sqrt(1-e2*Math.sin(phi1)**2), T1 = Math.tan(phi1)**2, C1 = ep2*Math.cos(phi1)**2, R1 = a*(1-e2)/Math.pow(1-e2*Math.sin(phi1)**2, 1.5), D = x/(N1*k0);
+  const lat = phi1-(N1*Math.tan(phi1)/R1)*(D**2/2-(5+3*T1+10*C1-4*C1**2-9*ep2)*D**4/24+(61+90*T1+298*C1+45*T1**2-252*ep2-3*C1**2)*D**6/720);
+  const lon = lng0+(D-(1+2*T1+C1)*D**3/6+(5-2*C1+28*T1-3*C1**2+8*ep2+24*T1**2)*D**5/120)/Math.cos(phi1);
+  return {lat:lat*180/Math.PI, lng:lon*180/Math.PI};
+}
+
+// ---------- Leer archivos y texto con coordenadas ----------
+const coordOk = q=>q && isFinite(q.lat) && isFinite(q.lng) && Math.abs(q.lat)<=90 && Math.abs(q.lng)<=180;
+function errorXML(doc){ return doc.getElementsByTagName('parsererror').length>0; }
+function parsearGPX(txt){
+  const doc = new DOMParser().parseFromString(txt, 'application/xml');
+  if(errorXML(doc)) throw new Error('El archivo GPX no es válido.');
+  const leer = tag=>Array.from(doc.getElementsByTagName(tag)).map(n=>({lat:parseFloat(n.getAttribute('lat')), lng:parseFloat(n.getAttribute('lon'))})).filter(coordOk);
+  let pts = leer('trkpt'), origen = 'ruta grabada (track)';
+  if(pts.length<3){ pts = leer('rtept'); origen = 'ruta'; }
+  if(pts.length<3){ pts = leer('wpt'); origen = 'puntos marcados (waypoints)'; }
+  return {pts, origen:'GPX · '+origen};
+}
+function coordsKML(t){
+  return t.trim().split(/\s+/).map(c=>{ const a = c.split(','); return {lat:parseFloat(a[1]), lng:parseFloat(a[0])}; }).filter(coordOk);
+}
+function parsearKML(txt){
+  const doc = new DOMParser().parseFromString(txt, 'application/xml');
+  if(errorXML(doc)) throw new Error('El archivo KML no es válido.');
+  const poly = doc.getElementsByTagName('Polygon')[0];
+  if(poly){ const c = poly.getElementsByTagName('coordinates')[0]; if(c) return {pts:coordsKML(c.textContent), origen:'KML · polígono'}; }
+  const ls = doc.getElementsByTagName('LineString')[0];
+  if(ls){ const c = ls.getElementsByTagName('coordinates')[0]; if(c) return {pts:coordsKML(c.textContent), origen:'KML · línea'}; }
+  const pts = [];
+  Array.from(doc.getElementsByTagName('Point')).forEach(pt=>{ const c = pt.getElementsByTagName('coordinates')[0]; if(c) coordsKML(c.textContent).forEach(q=>pts.push(q)); });
+  return {pts, origen:'KML · puntos'};
+}
+function parsearGeoJSON(txt){
+  const g = JSON.parse(txt), geoms = [];
+  const rec = o=>{
+    if(!o) return;
+    if(o.type==='FeatureCollection') (o.features||[]).forEach(rec);
+    else if(o.type==='Feature') rec(o.geometry);
+    else if(o.type==='GeometryCollection') (o.geometries||[]).forEach(rec);
+    else geoms.push(o);
+  };
+  rec(g);
+  const P = c=>({lat:c[1], lng:c[0]}), ok = a=>a.map(P).filter(coordOk);
+  const pol = geoms.find(x=>x.type==='Polygon'); if(pol) return {pts:ok(pol.coordinates[0]), origen:'GeoJSON · polígono'};
+  const mpol = geoms.find(x=>x.type==='MultiPolygon'); if(mpol) return {pts:ok(mpol.coordinates[0][0]), origen:'GeoJSON · polígono'};
+  const ln = geoms.find(x=>x.type==='LineString'); if(ln) return {pts:ok(ln.coordinates), origen:'GeoJSON · línea'};
+  const mp = geoms.find(x=>x.type==='MultiPoint'); if(mp) return {pts:ok(mp.coordinates), origen:'GeoJSON · puntos'};
+  const pts = geoms.filter(x=>x.type==='Point').map(x=>P(x.coordinates)).filter(coordOk);
+  return {pts, origen:'GeoJSON · puntos'};
+}
+function parsearTexto(txt, o){
+  const pts = []; let saltadas = 0, invertidas = 0;
+  txt.split(/\r?\n/).forEach(raw=>{
+    const linea = raw.trim(); if(!linea) return;
+    const nums = (linea.match(/[-+]?\d+(?:[.,]\d+)?/g)||[]).map(t=>({t, v:parseFloat(t.replace(',', '.')), dec:/[.,]/.test(t)}));
+    if(o.tipo==='utm'){
+      const g = nums.filter(x=>Math.abs(x.v)>=1000);
+      if(g.length<2){ if(nums.length) saltadas++; return; }
+      const este = o.orden==='ne' ? g[1].v : g[0].v, norte = o.orden==='ne' ? g[0].v : g[1].v;
+      const c = utmALatLng(este, norte, o.zona, o.hem);
+      if(coordOk(c)) pts.push(c); else saltadas++;
+      return;
+    }
+    const conDec = nums.filter(x=>x.dec), base = conDec.length>=2 ? conDec : nums;
+    if(base.length<2){ if(nums.length) saltadas++; return; }
+    let lat = base[0].v, lng = base[1].v;
+    if(o.orden==='lnglat'){ const t = lat; lat = lng; lng = t; }
+    if(Math.abs(lat)>90 && Math.abs(lng)<=90){ const t = lat; lat = lng; lng = t; invertidas++; }
+    if(coordOk({lat, lng})) pts.push({lat, lng}); else saltadas++;
+  });
+  return {pts, origen:(o.tipo==='utm' ? 'UTM zona '+o.zona+o.hem : 'texto')+(saltadas ? ' · '+saltadas+' línea(s) no válidas' : '')+(invertidas ? ' · '+invertidas+' con latitud/longitud invertidas, se corrigieron' : '')};
+}
+function limpiarPuntosImport(pts){
+  const r = [];
+  pts.forEach(q=>{ const u = r[r.length-1]; if(!u || Math.abs(u.lat-q.lat)>1e-7 || Math.abs(u.lng-q.lng)>1e-7) r.push(q); });
+  if(r.length>2 && Math.abs(r[0].lat-r[r.length-1].lat)<1e-6 && Math.abs(r[0].lng-r[r.length-1].lng)<1e-6) r.pop();
+  return r;
+}
+function simplificarRDP(pts, tol){
+  const xy = aXY(pts); if(xy.length!==pts.length || pts.length<4) return pts.slice();
+  const keep = new Array(pts.length).fill(false); keep[0] = keep[pts.length-1] = true;
+  const dist = (p,a,b)=>{ const dx = b.x-a.x, dy = b.y-a.y, l2 = dx*dx+dy*dy; let t = l2 ? ((p.x-a.x)*dx+(p.y-a.y)*dy)/l2 : 0; t = Math.max(0,Math.min(1,t)); return Math.hypot(p.x-(a.x+t*dx), p.y-(a.y+t*dy)); };
+  const rec = (i,j)=>{ let md = 0, mi = -1; for(let k=i+1;k<j;k++){ const d = dist(xy[k], xy[i], xy[j]); if(d>md){ md = d; mi = k; } } if(mi>=0 && md>tol){ keep[mi] = true; rec(i,mi); rec(mi,j); } };
+  rec(0, pts.length-1);
+  return pts.filter((q,i)=>keep[i]);
+}
+function interpretarImport(txt, nombre, o){
+  const n = (nombre||'').toLowerCase(), t = txt.trim();
+  let res;
+  if(n.endsWith('.gpx') || /<gpx[\s>]/i.test(t)) res = parsearGPX(t);
+  else if(n.endsWith('.kml') || /<kml[\s>]/i.test(t)) res = parsearKML(t);
+  else if(n.endsWith('.geojson') || n.endsWith('.json') || /^[\[{]/.test(t)) res = parsearGeoJSON(t);
+  else res = parsearTexto(t, o);
+  let pts = limpiarPuntosImport(res.pts), nota = '';
+  if(pts.length>60){
+    const antes = pts.length; let tol = 1, s2 = pts;
+    while(s2.length>60 && tol<30){ s2 = simplificarRDP(pts, tol); tol *= 1.5; }
+    pts = s2; nota = ' · simplificado de '+antes+' a '+pts.length+' puntos (tolerancia '+Math.round(tol/1.5*10)/10+' m)';
+  }
+  return {pts, origen:res.origen+nota};
+}
+
+// ---------- Ventana de importación ----------
+let importDestino = null, importPts = [], importTexto = '', importNombre = '';
+function abrirImportar(destino){
+  importDestino = destino; importPts = []; importTexto = ''; importNombre = '';
+  ['impTexto'].forEach(i=>document.getElementById(i).value = '');
+  document.getElementById('impArchivo').value = '';
+  document.getElementById('impTipo').value = 'dec'; document.getElementById('impOrden').value = 'latlng'; document.getElementById('impOrdenUtm').value = 'en';
+  document.getElementById('impResumen').innerHTML = '';
+  document.getElementById('impReemplazar').disabled = true; document.getElementById('impAgregar').disabled = true;
+  cambiarTipoImport();
+  document.getElementById('modalImport').style.display = 'flex';
+}
+function cerrarImportar(){ document.getElementById('modalImport').style.display = 'none'; importDestino = null; }
+function cambiarTipoImport(){
+  const utm = document.getElementById('impTipo').value==='utm';
+  document.getElementById('impFilaUtm').style.display = utm ? 'grid' : 'none';
+  document.getElementById('impFilaOrden').style.display = utm ? 'none' : 'block';
+}
+function leerArchivoImport(input){
+  const f = input.files && input.files[0]; if(!f) return;
+  const lector = new FileReader();
+  lector.onerror = ()=>{ document.getElementById('impResumen').textContent = 'No se pudo leer el archivo.'; };
+  lector.onload = e=>{
+    importTexto = String(e.target.result||''); importNombre = f.name;
+    document.getElementById('impTexto').value = importTexto.length<20000 ? importTexto : '';
+    leerImport();
+  };
+  lector.readAsText(f);
+}
+function leerImport(){
+  const res = document.getElementById('impResumen');
+  const texto = document.getElementById('impTexto').value.trim() || importTexto;
+  if(!texto){ res.textContent = 'Elige un archivo o pega las coordenadas.'; return; }
+  try{
+    const o = {tipo:document.getElementById('impTipo').value, orden:document.getElementById('impTipo').value==='utm' ? document.getElementById('impOrdenUtm').value : document.getElementById('impOrden').value,
+      zona:parseInt(document.getElementById('impZona').value,10)||18, hem:document.getElementById('impHem').value};
+    const r = interpretarImport(texto, document.getElementById('impTexto').value.trim() ? '' : importNombre, o);
+    importPts = r.pts;
+    if(!r.pts.length){ res.innerHTML = 'No se encontraron coordenadas válidas. Revisa el tipo de coordenadas (decimales o UTM), el orden y la zona.'; document.getElementById('impReemplazar').disabled = true; document.getElementById('impAgregar').disabled = true; return; }
+    const geo = calcularGeo(r.pts);
+    res.innerHTML = '<b>'+r.pts.length+' puntos</b> leídos ('+esc(r.origen)+').'+(geo ? '<br>'+textoGeo(geo) : '<br>Se necesitan 3 o más puntos para calcular el área.')+avisosPuntos(r.pts);
+    document.getElementById('impReemplazar').disabled = false; document.getElementById('impAgregar').disabled = false;
+  }catch(e){
+    res.textContent = 'No se pudo leer: '+(e.message||e); document.getElementById('impReemplazar').disabled = true; document.getElementById('impAgregar').disabled = true;
+  }
+}
+function aplicarImportacion(modo){
+  if(!importPts.length) return;
+  const dest = importDestino, nuevos = importPts.map(q=>({lat:q.lat.toFixed(7), lng:q.lng.toFixed(7)}));
+  if(dest==='lote' || dest==='pis' || dest==='gal'){
+    puntosTemp[dest] = modo==='agregar' ? puntosTemp[dest].concat(nuevos) : nuevos; renderPuntosTemp(dest);
+  }else if(dest==='ed'){
+    edicionPuntos = modo==='agregar' ? edicionPuntos.concat(nuevos) : nuevos; renderPuntosEdicion();
+  }else if(dest==='mapa'){
+    const e = mapas.ml && mapas.ml.edit; if(!e) return;
+    guardarHistorialEdicion();
+    e.pts = (modo==='agregar' ? e.pts : []).concat(importPts.map(q=>({lat:q.lat, lng:q.lng})));
+    dibujarEdicion(); ajustarEdicion();
+  }
+  aviso('✔ '+nuevos.length+' puntos importados');
+  cerrarImportar();
+}
+
+// ---------- Exportar polígonos ----------
+let ultimaDescarga = null;
+function descargarArchivo(nombre, mime, contenido){
+  ultimaDescarga = {nombre, mime, contenido};
+  const blob = new Blob([contenido], {type:mime+';charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = nombre; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 2000);
+}
+function xmlEsc(t){ return String(t==null ? '' : t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function lotesConPuntos(lotes){ return lotes.filter(l=>puntosValidos(l).length); }
+function propsLote(l){
+  const geo = calcularGeo(l.puntos);
+  return {nombre:l.nombre, tipo:l.tipo, cultivo_o_especie:l.tipo==='cultivo' ? nombreCultivo(l.cultivoId) : (l.especie||l.tipoAve||''), variedad:l.variedad||'',
+    area_m2:geo ? Math.round(geo.areaM2*10)/10 : null, area_ha:geo ? Math.round(geo.areaM2/10)/1000 : null, perimetro_m:geo ? Math.round(geo.perimetro*10)/10 : null, puntos:(l.puntos||[]).length};
+}
+function generarGeoJSON(lotes){
+  const feats = lotesConPuntos(lotes).map(l=>{
+    const pts = puntosValidos(l); let geometry;
+    if(pts.length>=3){ const ring = pts.map(q=>[q[1],q[0]]); ring.push(ring[0].slice()); geometry = {type:'Polygon', coordinates:[ring]}; }
+    else if(pts.length===2) geometry = {type:'LineString', coordinates:pts.map(q=>[q[1],q[0]])};
+    else geometry = {type:'Point', coordinates:[pts[0][1], pts[0][0]]};
+    return {type:'Feature', properties:propsLote(l), geometry};
+  });
+  return JSON.stringify({type:'FeatureCollection', name:'Finca Amy&Thadel', crs:{type:'name', properties:{name:'urn:ogc:def:crs:OGC:1.3:CRS84'}}, features:feats}, null, 2);
+}
+function generarKML(lotes){
+  const col = {cultivo:'ff327d2e', piscina:'ff776e2e', galpon:'ff2c8ac9'};
+  const marks = lotesConPuntos(lotes).map(l=>{
+    const pts = puntosValidos(l), pr = propsLote(l), c = col[l.tipo]||'ff327d2e';
+    const desc = xmlEsc(pr.cultivo_o_especie+(pr.area_m2!=null ? ' · Área: '+pr.area_m2+' m² ('+pr.area_ha+' ha) · Perímetro: '+pr.perimetro_m+' m' : ''));
+    const coords = pts.map(q=>q[1]+','+q[0]+',0');
+    let geom;
+    if(pts.length>=3) geom = '<Polygon><outerBoundaryIs><LinearRing><coordinates>'+coords.concat([coords[0]]).join(' ')+'</coordinates></LinearRing></outerBoundaryIs></Polygon>';
+    else if(pts.length===2) geom = '<LineString><coordinates>'+coords.join(' ')+'</coordinates></LineString>';
+    else geom = '<Point><coordinates>'+coords[0]+'</coordinates></Point>';
+    return '<Placemark><name>'+xmlEsc(l.nombre)+'</name><description>'+desc+'</description><Style><LineStyle><color>ffffffff</color><width>2</width></LineStyle><PolyStyle><color>66'+c.slice(2)+'</color></PolyStyle></Style>'+geom+'</Placemark>';
+  }).join('\n');
+  return '<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>Finca Amy&amp;Thadel</name>\n'+marks+'\n</Document></kml>';
+}
+function generarGPX(lotes){
+  const cuerpo = lotesConPuntos(lotes).map(l=>{
+    const pts = puntosValidos(l);
+    const wpts = pts.map((q,i)=>'<wpt lat="'+q[0]+'" lon="'+q[1]+'"><name>'+xmlEsc(l.nombre+' P'+(i+1))+'</name></wpt>').join('\n');
+    const cerrado = pts.length>=3 ? pts.concat([pts[0]]) : pts;
+    const trk = '<trk><name>'+xmlEsc(l.nombre)+'</name><trkseg>'+cerrado.map(q=>'<trkpt lat="'+q[0]+'" lon="'+q[1]+'"/>').join('')+'</trkseg></trk>';
+    return wpts+'\n'+trk;
+  }).join('\n');
+  return '<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Finca Amy&amp;Thadel" xmlns="http://www.topografix.com/GPX/1/1">\n'+cuerpo+'\n</gpx>';
+}
+function generarCSV(lotes){
+  const filas = ['lote,tipo,punto,latitud,longitud,precision_m,utm_zona,utm_hem,utm_este,utm_norte'];
+  lotesConPuntos(lotes).forEach(l=>{
+    (l.puntos||[]).forEach((q,i)=>{
+      const la = numero(q.lat), ln = numero(q.lng); if(!isFinite(la) || !isFinite(ln)) return;
+      const u = latLngAUtm(la, ln);
+      filas.push([JSON.stringify(l.nombre), l.tipo, i+1, la.toFixed(7), ln.toFixed(7), (q.prec!=null ? q.prec : ''), u.zona, u.hemisferio, u.este.toFixed(2), u.norte.toFixed(2)].join(','));
+    });
+  });
+  return filas.join('\n');
+}
+function exportarMapa(p){
+  const st = mapas[p]; if(!st) return;
+  const lotes = lotesConPuntos(st.getLotes());
+  if(!lotes.length){ alert('Aún no hay puntos de polígono para exportar.'); return; }
+  const fmt = document.getElementById(p+'ExpFormato').value;
+  const base = lotes.length===1 ? lotes[0].nombre.replace(/[^\w\-]+/g,'_') : 'finca-poligonos-'+hoyISO();
+  if(fmt==='geojson') descargarArchivo(base+'.geojson', 'application/geo+json', generarGeoJSON(lotes));
+  else if(fmt==='kml') descargarArchivo(base+'.kml', 'application/vnd.google-earth.kml+xml', generarKML(lotes));
+  else if(fmt==='gpx') descargarArchivo(base+'.gpx', 'application/gpx+xml', generarGPX(lotes));
+  else descargarArchivo(base+'.csv', 'text/csv', generarCSV(lotes));
+  aviso('✔ Archivo '+fmt.toUpperCase()+' generado');
+}
+
+// ---------- Editar el polígono arrastrando los puntos en el mapa ----------
+function guardarHistorialEdicion(){ const e = mapas.ml && mapas.ml.edit; if(e){ e.hist.push(JSON.stringify(e.pts)); if(e.hist.length>40) e.hist.shift(); } }
+function infoEdicion(){
+  const e = mapas.ml && mapas.ml.edit, el = document.getElementById('mlEdicionInfo'); if(!e || !el) return;
+  const geo = calcularGeo(e.pts);
+  el.innerHTML = (geo ? textoGeo(geo) : 'Puntos: '+e.pts.length+' (se necesitan 3 o más para calcular el área)')+avisosPuntos(e.pts);
+}
+function insertarVertice(pts, nuevo){
+  if(pts.length<3){ pts.push(nuevo); return pts.length-1; }
+  const mg = mPorGrado(nuevo.lat);
+  const P = pts.map(q=>({x:(q.lng-nuevo.lng)*mg.lng, y:(q.lat-nuevo.lat)*mg.lat}));
+  let mejor = 0, md = Infinity;
+  for(let i=0;i<P.length;i++){
+    const a = P[i], b = P[(i+1)%P.length], dx = b.x-a.x, dy = b.y-a.y, l2 = dx*dx+dy*dy;
+    let t = l2 ? (-a.x*dx-a.y*dy)/l2 : 0; t = Math.max(0, Math.min(1, t));
+    const d = Math.hypot(a.x+t*dx, a.y+t*dy);
+    if(d<md){ md = d; mejor = i; }
+  }
+  pts.splice(mejor+1, 0, nuevo); return mejor+1;
+}
+function dibujarEdicion(){
+  const st = mapas.ml; if(!st || !st.edit || !st.map) return;
+  const e = st.edit, l = datos.lotes.find(x=>x.id===loteAbierto) || {};
+  const color = COLOR_TIPO[l.tipo] || '#2E7D32';
+  e.capa.clearLayers(); e.poli = null;
+  const ll = e.pts.map(q=>[q.lat, q.lng]);
+  if(ll.length>=3) e.poli = L.polygon(ll, {color:'#FFFFFF', weight:3, fillColor:color, fillOpacity:0.3, dashArray:'6 4'}).addTo(e.capa);
+  else if(ll.length===2) e.poli = L.polyline(ll, {color:'#FFFFFF', weight:3, dashArray:'6 4'}).addTo(e.capa);
+  e.pts.forEach((q,i)=>{
+    const m = L.marker([q.lat, q.lng], {draggable:true, icon:L.divIcon({className:'vertice', html:'<div class="v-num">'+(i+1)+'</div>', iconSize:[26,26], iconAnchor:[13,13]})}).addTo(e.capa);
+    m.on('dragstart', ()=>guardarHistorialEdicion());
+    m.on('drag', ev=>{
+      const c = ev.target.getLatLng(); q.lat = c.lat; q.lng = c.lng; delete q.prec;
+      if(e.poli) e.poli.setLatLngs(e.pts.map(z=>[z.lat, z.lng]));
+      infoEdicion();
+    });
+    m.on('dragend', ()=>dibujarEdicion());
+    m.bindPopup('<div style="text-align:center;"><b>Punto '+(i+1)+'</b><br><button class="sec" onclick="quitarVerticeMapa('+i+')">🗑 Quitar este punto</button></div>');
+  });
+  infoEdicion();
+}
+function ajustarEdicion(){
+  const st = mapas.ml; if(!st || !st.edit || !st.map || !st.edit.pts.length) return;
+  try{ st.map.fitBounds(L.latLngBounds(st.edit.pts.map(q=>[q.lat, q.lng])).pad(0.3), {maxZoom:19}); }catch(e){}
+}
+function clickMapaEdicion(ev){
+  const e = mapas.ml && mapas.ml.edit; if(!e) return;
+  guardarHistorialEdicion();
+  insertarVertice(e.pts, {lat:ev.latlng.lat, lng:ev.latlng.lng});
+  dibujarEdicion();
+}
+function quitarVerticeMapa(i){
+  const e = mapas.ml && mapas.ml.edit; if(!e) return;
+  guardarHistorialEdicion(); e.pts.splice(i,1);
+  if(mapas.ml.map) mapas.ml.map.closePopup();
+  dibujarEdicion();
+}
+function deshacerEdicion(){
+  const e = mapas.ml && mapas.ml.edit; if(!e || !e.hist.length){ aviso('No hay nada que deshacer.'); return; }
+  e.pts = JSON.parse(e.hist.pop()); dibujarEdicion();
+}
+function ordenarEdicion(){
+  const e = mapas.ml && mapas.ml.edit; if(!e || e.pts.length<3) return;
+  guardarHistorialEdicion(); e.pts = ordenarPorAngulo(e.pts); dibujarEdicion(); aviso('Puntos ordenados alrededor del lote');
+}
+function gpsEdicion(){
+  capturarGPS(r=>{
+    const e = mapas.ml && mapas.ml.edit; if(!e) return;
+    guardarHistorialEdicion();
+    insertarVertice(e.pts, {lat:r.lat, lng:r.lng, prec:Math.round(r.prec)});
+    dibujarEdicion(); ajustarEdicion(); aviso('✔ Punto agregado (±'+Math.round(r.prec)+' m)');
+  });
+}
+function editarPoligonoMapa(){
+  const st = mapas.ml, l = datos.lotes.find(x=>x.id===loteAbierto);
+  if(!st || !l) return;
+  if(typeof L==='undefined'){ alert('El editor de mapa no está disponible en este dispositivo.'); return; }
+  const ed = document.getElementById('editorLote');
+  if(ed && ed.innerHTML.trim()){ aviso('Primero cierra el editor de datos del lote.'); return; }
+  if(st.modo==='croquis') modoMapa('ml','sat');
+  if(!st.map){ alert('No se pudo abrir el mapa.'); return; }
+  editorActivo = true;
+  st.capa.clearLayers();
+  st.edit = {pts:(l.puntos||[]).map(q=>({lat:numero(q.lat), lng:numero(q.lng), prec:q.prec})).filter(q=>isFinite(q.lat) && isFinite(q.lng)), hist:[], capa:L.layerGroup().addTo(st.map), poli:null};
+  st.edit.pts.forEach(q=>{ if(q.prec==null) delete q.prec; });
+  st.map.on('click', clickMapaEdicion);
+  document.getElementById('mlEdicion').style.display = 'block';
+  document.getElementById('mlBtnEditar').style.display = 'none';
+  dibujarEdicion(); ajustarEdicion();
+}
+function terminarEdicionMapa(){
+  const st = mapas.ml; if(!st) return;
+  if(st.map) st.map.off('click', clickMapaEdicion);
+  delete st.edit; editorActivo = false;
+}
+function cancelarEdicionMapa(){
+  const e = mapas.ml && mapas.ml.edit; if(!e) return;
+  if(e.hist.length && !confirm('Se perderán los cambios hechos en el mapa. ¿Cancelar la edición?')) return;
+  terminarEdicionMapa(); renderDetalleLote();
+}
+function guardarEdicionMapa(){
+  const e = mapas.ml && mapas.ml.edit, l = datos.lotes.find(x=>x.id===loteAbierto); if(!e || !l) return;
+  if(e.pts.length>0 && e.pts.length<3 && !confirm('Con menos de 3 puntos no se puede calcular el área. ¿Guardar de todos modos?')) return;
+  if(e.pts.length>=4 && poligonoSeCruza(e.pts) && !confirm('Los puntos se cruzan y el área saldrá menor a la real. ¿Guardar de todos modos?')) return;
+  l.puntos = e.pts.map(q=>{ const o = {lat:q.lat.toFixed(7), lng:q.lng.toFixed(7)}; if(q.prec!=null) o.prec = q.prec; return o; });
+  const geo = calcularGeo(l.puntos);
+  l.areaM2 = geo ? geo.areaM2 : null;
+  if(geo) l.area = textoArea(geo.areaM2);
+  terminarEdicionMapa();
+  guardar(); renderTodo(); renderDetalleLote();
+  aviso(geo ? '✔ Polígono guardado: '+textoArea(geo.areaM2) : '✔ Puntos guardados');
+}
+function ordenarEdicionLista(){
+  if(edicionPuntos.length<3) return;
+  edicionPuntos = ordenarPorAngulo(edicionPuntos); renderPuntosEdicion(); aviso('Puntos ordenados alrededor del lote');
+}
+
 // ---------------- Mapas (satélite, calles y croquis sin internet) ----------------
 const COLOR_TIPO = {cultivo:'#2E7D32', piscina:'#2E6E77', galpon:'#C98A2C'};
 const CAPAS_MAPA = {
@@ -2054,15 +2590,37 @@ function puntosValidos(l){
   return (l.puntos||[]).map(q=>[numero(q.lat), numero(q.lng)]).filter(q=>isFinite(q[0]) && isFinite(q[1]));
 }
 function htmlWidgetMapa(p){
+  const editar = p==='ml' ? `<button class="sec" id="mlBtnEditar" onclick="editarPoligonoMapa()">✎ Editar polígono en el mapa</button>` : '';
+  const barraEdicion = p==='ml' ? `
+  <div id="mlEdicion" style="display:none;margin-top:8px;">
+    <div class="geo-calc" id="mlEdicionInfo"></div>
+    <small class="ayuda">Arrastra los números para mover los puntos. Toca el mapa para agregar un punto entre los más cercanos. Toca un punto para quitarlo.</small>
+    <div class="mapa-barra" style="margin-top:6px;">
+      <button class="sec" onclick="guardarEdicionMapa()">✔ Guardar</button>
+      <button class="sec" onclick="cancelarEdicionMapa()">✖ Cancelar</button>
+      <button class="sec" onclick="deshacerEdicion()">↶ Deshacer</button>
+      <button class="sec" onclick="gpsEdicion()">📍 Agregar mi ubicación</button>
+      <button class="sec" onclick="ordenarEdicion()">🔄 Ordenar puntos</button>
+      <button class="sec" onclick="abrirImportar('mapa')">📥 Importar</button>
+    </div>
+  </div>` : '';
   return `<div class="mapa-barra">
     <button class="sec activo" id="${p}BtnSat" onclick="modoMapa('${p}','sat')">🛰 Satélite</button>
     <button class="sec" id="${p}BtnCalles" onclick="modoMapa('${p}','calles')">🗺 Calles</button>
     <button class="sec" id="${p}BtnCroquis" onclick="modoMapa('${p}','croquis')">📐 Croquis</button>
+    ${editar}
     <button class="sec" onclick="descargarMapaOffline('${p}')">📥 Guardar mapa para usar sin internet</button>
   </div>
-  <div id="${p}MapaLeaflet" style="height:300px;border-radius:8px;overflow:hidden;border:1px solid var(--linea);background:#dfe6dc;"></div>
+  <div id="${p}MapaLeaflet" style="height:320px;border-radius:8px;overflow:hidden;border:1px solid var(--linea);background:#dfe6dc;"></div>
   <div id="${p}MapaCroquis" style="display:none;"></div>
-  <small class="ayuda" id="${p}MapaInfo"></small>`;
+  ${barraEdicion}
+  <small class="ayuda" id="${p}MapaInfo"></small>
+  <div class="mapa-barra" style="margin-top:8px;">
+    <select id="${p}ExpFormato" style="width:auto;flex:1;min-width:170px;">
+      <option value="geojson">GeoJSON (QGIS)</option><option value="kml">KML (Google Earth)</option><option value="gpx">GPX (GPS)</option><option value="csv">CSV (lat, lng y UTM)</option>
+    </select>
+    <button class="sec" onclick="exportarMapa('${p}')">📤 Exportar polígono${p==='mf' ? 's' : ''}</button>
+  </div>`;
 }
 function destruirMapa(p){
   const st = mapas[p];
@@ -2116,6 +2674,7 @@ function ajustarVista(p){
 }
 function modoMapa(p, modo){
   const st = mapas[p]; if(!st) return;
+  if(st.edit && modo==='croquis'){ aviso('Termina la edición para ver el croquis.'); return; }
   st.modo = modo;
   ['Sat','Calles','Croquis'].forEach(k=>{ const b = document.getElementById(p+'Btn'+k); if(b) b.classList.toggle('activo', k.toLowerCase()===modo); });
   const lf = document.getElementById(p+'MapaLeaflet'), cr = document.getElementById(p+'MapaCroquis'), info = document.getElementById(p+'MapaInfo');
@@ -2151,10 +2710,9 @@ function svgCroquis(lotes, resaltarId){
   const grupos = lotes.map(l=>({l, pts:puntosValidos(l)})).filter(g=>g.pts.length);
   if(!grupos.length) return '<p class="vacio">Aún no hay puntos del polígono. Agrégalos con "Editar datos y polígono".</p>';
   const todos = grupos.flatMap(g=>g.pts);
-  const k = Math.PI/180, R = 6371008.8;
   const latRef = Math.min(...todos.map(q=>q[0])), lngRef = Math.min(...todos.map(q=>q[1]));
-  const latMed = todos.reduce((a,q)=>a+q[0],0)/todos.length;
-  const proy = q=>({x:R*(q[1]-lngRef)*k*Math.cos(latMed*k), y:R*(q[0]-latRef)*k});
+  const mg = mPorGrado(todos.reduce((a,q)=>a+q[0],0)/todos.length);
+  const proy = q=>({x:(q[1]-lngRef)*mg.lng, y:(q[0]-latRef)*mg.lat});
   const G = grupos.map(g=>({...g, xy:g.pts.map(proy)}));
   const xs = G.flatMap(g=>g.xy.map(q=>q.x)), ys = G.flatMap(g=>g.xy.map(q=>q.y));
   const W = 400, H = 300, M = 34;
@@ -2509,7 +3067,7 @@ function renderDetalleLote(){
   destruirMapa('ml');
   if(l.tipo==='cultivo') renderDetalleCultivo(); else renderDetallePecuario(l);
   const w = document.getElementById('mlWidget');
-  if(w){ w.innerHTML = htmlWidgetMapa('ml'); montarMapa('ml', ()=>[datos.lotes.find(x=>x.id===loteAbierto)||l], l.id); }
+  if(w){ w.innerHTML = htmlWidgetMapa('ml'); montarMapa('ml', ()=>[datos.lotes.find(x=>x.id===loteAbierto)||l], l.id); w.insertAdjacentHTML('beforeend', avisosPuntos(l.puntos)); }
 }
 function renderDetallePecuario(l){
   const cont = document.getElementById('detalleContenido');
@@ -2558,7 +3116,7 @@ function renderDetallePecuario(l){
     filas += filaInfo('Alimento suministrado', f(st.alimentoLb)+' lb');
     if(areaM2) filas += filaInfo('Área', textoArea(areaM2));
   }
-  filas += filaInfo('Puntos del polígono', (l.puntos && l.puntos.length) ? l.puntos.length+mapa : 'Sin puntos');
+  filas += filaInfo('Puntos del polígono', (l.puntos && l.puntos.length) ? l.puntos.length+precResumen(l)+mapa : 'Sin puntos');
   cont.innerHTML = `
   <div class="card">
     <div style="font-size:1.15rem;font-weight:700;color:var(--tierra);">${esPez?'🐟':'🐔'} ${esc(l.nombre)}</div>
@@ -2621,7 +3179,7 @@ function renderDetalleCultivo(){
       ${filaInfo('Área', areaM2 ? textoArea(areaM2) : (esc(l.area)||'—'))}
       ${filaInfo('Perímetro', geo ? Math.round(geo.perimetro)+' m' : '—')}
       ${filaInfo('Dimensiones aprox. del lote', geo ? Math.round(geo.largo)+' m × '+Math.round(geo.ancho)+' m' : '—')}
-      ${filaInfo('Puntos del polígono', (l.puntos && l.puntos.length) ? l.puntos.length+mapa : 'Sin puntos')}
+      ${filaInfo('Puntos del polígono', (l.puntos && l.puntos.length) ? l.puntos.length+precResumen(l)+mapa : 'Sin puntos')}
     </div>
     <div class="footer-acc" style="margin-top:10px;">
       <button class="sec" onclick="editarLote()">✎ Editar datos y polígono</button>
@@ -2653,6 +3211,7 @@ function renderDetalleCultivo(){
 
 function editarLote(){
   const l = datos.lotes.find(x=>x.id===loteAbierto); if(!l) return;
+  if(mapas.ml && mapas.ml.edit){ aviso('Termina primero la edición en el mapa.'); return; }
   editorActivo = true; edicionPuntos = (l.puntos||[]).map(p=>({...p}));
   let especificos = '';
   if(l.tipo==='cultivo'){
@@ -2693,7 +3252,9 @@ function editarLote(){
       <input id="edPtLat" placeholder="Latitud"><input id="edPtLng" placeholder="Longitud">
       <button class="sec" type="button" onclick="agregarPuntoEdicion()">+ Punto</button>
     </div>
-    <button class="sec" type="button" style="margin-top:6px;width:100%;" onclick="usarUbicacionEdicion()">📍 Usar mi ubicación como punto</button>
+    <button class="sec" type="button" style="margin-top:6px;width:100%;" onclick="usarUbicacionEdicion()">📍 Capturar punto con GPS (promedia lecturas)</button>
+    <button class="sec" type="button" style="margin-top:6px;width:100%;" onclick="abrirImportar('ed')">📥 Importar puntos (GPX, KML, CSV, UTM)</button>
+    <button class="sec" type="button" style="margin-top:6px;width:100%;" onclick="ordenarEdicionLista()">🔄 Ordenar puntos alrededor del lote</button>
     <div id="edPuntosLista" style="margin-top:6px;font-size:.78rem;"></div>
     <div id="edGeoCalc" class="geo-calc"></div>
     <div class="footer-acc" style="margin-top:10px;">
@@ -2703,25 +3264,25 @@ function editarLote(){
   renderPuntosEdicion();
 }
 function renderPuntosEdicion(){
-  document.getElementById('edPuntosLista').innerHTML = edicionPuntos.length ? edicionPuntos.map((p,i)=>
-    '<div>'+(i+1)+'. '+esc(p.lat)+', '+esc(p.lng)+' <button class="mini-del" onclick="quitarPuntoEdicion('+i+')">🗑</button></div>').join('')
+  document.getElementById('edPuntosLista').innerHTML = edicionPuntos.length ? edicionPuntos.map((q,i)=>
+    '<div>'+(i+1)+'. '+esc(q.lat)+', '+esc(q.lng)+precTxt(q)+' <button class="mini-del" onclick="quitarPuntoEdicion('+i+')">🗑</button></div>').join('')
     : '<span class="ayuda">Sin puntos.</span>';
   const geo = calcularGeo(edicionPuntos);
-  document.getElementById('edGeoCalc').innerHTML = geo ? textoGeo(geo) : '';
+  document.getElementById('edGeoCalc').innerHTML = (geo ? textoGeo(geo) : '') + avisosPuntos(edicionPuntos);
 }
 function agregarPuntoEdicion(){
   const lat = document.getElementById('edPtLat').value.trim(), lng = document.getElementById('edPtLng').value.trim();
-  if(!lat || !lng){ alert('Ingresa latitud y longitud.'); return; }
+  const err = validarCoord(lat, lng); if(err){ alert(err); return; }
   edicionPuntos.push({lat, lng});
   document.getElementById('edPtLat').value=''; document.getElementById('edPtLng').value='';
   renderPuntosEdicion();
 }
 function usarUbicacionEdicion(){
-  if(!navigator.geolocation){ alert('Geolocalización no disponible en este navegador.'); return; }
-  navigator.geolocation.getCurrentPosition(pos=>{
-    edicionPuntos.push({lat: pos.coords.latitude.toFixed(6), lng: pos.coords.longitude.toFixed(6)});
+  capturarGPS(r=>{
+    edicionPuntos.push({lat:r.lat.toFixed(7), lng:r.lng.toFixed(7), prec:Math.round(r.prec)});
     renderPuntosEdicion();
-  }, ()=> alert('No se pudo obtener la ubicación.'));
+    aviso('✔ Punto agregado (±'+Math.round(r.prec)+' m, '+r.n+' lecturas)');
+  });
 }
 function quitarPuntoEdicion(i){ edicionPuntos.splice(i,1); renderPuntosEdicion(); }
 function cancelarEdicion(){ editorActivo=false; renderDetalleLote(); }
